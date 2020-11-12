@@ -14,7 +14,6 @@ from .interpolated_lazy_tensor import InterpolatedLazyTensor
 from .keops_lazy_tensor import KeOpsLazyTensor
 from .kronecker_product_added_diag_lazy_tensor import KroneckerProductAddedDiagLazyTensor
 from .kronecker_product_lazy_tensor import KroneckerProductLazyTensor, KroneckerProductTriangularLazyTensor
-from .lazy_evaluated_kernel_tensor import LazyEvaluatedKernelTensor
 from .lazy_tensor import LazyTensor, delazify
 from .matmul_lazy_tensor import MatmulLazyTensor
 from .mul_lazy_tensor import MulLazyTensor
@@ -32,7 +31,6 @@ __all__ = [
     "lazify",
     "cat",
     "LazyTensor",
-    "LazyEvaluatedKernelTensor",
     "AddedDiagLazyTensor",
     "BatchRepeatLazyTensor",
     "BlockLazyTensor",
