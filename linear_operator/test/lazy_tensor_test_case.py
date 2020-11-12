@@ -8,9 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import torch
 
-import gpytorch
-
 from .base_test_case import BaseTestCase
+from ..lazy import delazify, LazyTensor
+from .. import settings
+from ..utils import linear_cg
+from ..utils.lanczos import lanczos_tridiag
 
 
 def _ensure_symmetric_grad(grad):
@@ -176,16 +178,16 @@ class RectangularLazyTensorTestCase(BaseTestCase):
             res, actual = lazy_tensor[index], evaluated[index]
             self.assertAllClose(res, actual)
             index = (torch.tensor([0, 0, 1, 2]), slice(None, None, None))
-            res, actual = gpytorch.delazify(lazy_tensor[index]), evaluated[index]
+            res, actual = delazify(lazy_tensor[index]), evaluated[index]
             self.assertAllClose(res, actual)
             index = (slice(None, None, None), torch.tensor([0, 0, 1, 2]))
-            res, actual = gpytorch.delazify(lazy_tensor[index]), evaluated[index]
+            res, actual = delazify(lazy_tensor[index]), evaluated[index]
             self.assertAllClose(res, actual)
             index = (torch.tensor([0, 0, 1, 2]), Ellipsis)
-            res, actual = gpytorch.delazify(lazy_tensor[index]), evaluated[index]
+            res, actual = delazify(lazy_tensor[index]), evaluated[index]
             self.assertAllClose(res, actual)
             index = (Ellipsis, torch.tensor([0, 0, 1, 2]))
-            res, actual = gpytorch.delazify(lazy_tensor[index]), evaluated[index]
+            res, actual = delazify(lazy_tensor[index]), evaluated[index]
             self.assertAllClose(res, actual)
             index = (Ellipsis, torch.tensor([0, 0, 1, 2]), torch.tensor([0, 1, 0, 2]))
             res, actual = lazy_tensor[index], evaluated[index]
@@ -200,10 +202,10 @@ class RectangularLazyTensorTestCase(BaseTestCase):
                 res, actual = lazy_tensor[index], evaluated[index]
                 self.assertAllClose(res, actual)
                 index = (*batch_index, torch.tensor([0, 1, 0, 2]), slice(None, None, None))
-                res, actual = gpytorch.delazify(lazy_tensor[index]), evaluated[index]
+                res, actual = delazify(lazy_tensor[index]), evaluated[index]
                 self.assertAllClose(res, actual)
                 index = (*batch_index, slice(None, None, None), torch.tensor([0, 1, 2, 1]))
-                res, actual = gpytorch.delazify(lazy_tensor[index]), evaluated[index]
+                res, actual = delazify(lazy_tensor[index]), evaluated[index]
                 self.assertAllClose(res, actual)
                 index = (*batch_index, slice(None, None, None), slice(None, None, None))
                 res, actual = lazy_tensor[index].evaluate(), evaluated[index]
@@ -213,7 +215,7 @@ class RectangularLazyTensorTestCase(BaseTestCase):
             res = lazy_tensor.__getitem__((Ellipsis, torch.tensor([0, 1, 0, 2]), torch.tensor([1, 2, 0, 1])))
             actual = evaluated.__getitem__((Ellipsis, torch.tensor([0, 1, 0, 2]), torch.tensor([1, 2, 0, 1])))
             self.assertAllClose(res, actual)
-            res = gpytorch.delazify(
+            res = delazify(
                 lazy_tensor.__getitem__((torch.tensor([0, 1, 0, 1]), Ellipsis, torch.tensor([1, 2, 0, 1])))
             )
             actual = evaluated.__getitem__((torch.tensor([0, 1, 0, 1]), Ellipsis, torch.tensor([1, 2, 0, 1])))
@@ -235,7 +237,7 @@ class RectangularLazyTensorTestCase(BaseTestCase):
         right_vecs = torch.randn(*lazy_tensor.batch_shape, lazy_tensor.size(-1), 2)
 
         deriv_custom = lazy_tensor._quad_form_derivative(left_vecs, right_vecs)
-        deriv_auto = gpytorch.lazy.LazyTensor._quad_form_derivative(lazy_tensor_clone, left_vecs, right_vecs)
+        deriv_auto = LazyTensor._quad_form_derivative(lazy_tensor_clone, left_vecs, right_vecs)
 
         for dc, da in zip(deriv_custom, deriv_auto):
             self.assertAllClose(dc, da)
@@ -281,9 +283,9 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
             lhs.requires_grad_(True)
             lhs_copy = lhs.clone().detach().requires_grad_(True)
 
-        _wrapped_cg = MagicMock(wraps=gpytorch.utils.linear_cg)
-        with patch("gpytorch.utils.linear_cg", new=_wrapped_cg) as linear_cg_mock:
-            with gpytorch.settings.max_cholesky_size(math.inf if cholesky else 0), gpytorch.settings.cg_tolerance(1e-4):
+        _wrapped_cg = MagicMock(wraps=linear_cg)
+        with patch("linear_operator.utils.linear_cg", new=_wrapped_cg) as linear_cg_mock:
+            with settings.max_cholesky_size(math.inf if cholesky else 0), settings.cg_tolerance(1e-4):
                 # Perform the inv_matmul
                 if lhs is not None:
                     res = lazy_tensor.inv_matmul(rhs, lhs)
@@ -320,11 +322,11 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
             vecs = torch.randn(*lazy_tensor.batch_shape, lazy_tensor.size(-1), 3, requires_grad=True)
             vecs_copy = vecs.clone().detach_().requires_grad_(True)
 
-            _wrapped_cg = MagicMock(wraps=gpytorch.utils.linear_cg)
-            with patch("gpytorch.utils.linear_cg", new=_wrapped_cg) as linear_cg_mock:
-                with gpytorch.settings.num_trace_samples(256), gpytorch.settings.max_cholesky_size(
+            _wrapped_cg = MagicMock(wraps=linear_cg)
+            with patch("linear_operator.utils.linear_cg", new=_wrapped_cg) as linear_cg_mock:
+                with settings.num_trace_samples(256), settings.max_cholesky_size(
                     math.inf if cholesky else 0
-                ), gpytorch.settings.cg_tolerance(1e-5):
+                ), settings.cg_tolerance(1e-5):
 
                     res_inv_quad, res_logdet = lazy_tensor.inv_quad_logdet(
                         inv_quad_rhs=vecs, logdet=True, reduce_inv_quad=reduce_inv_quad
@@ -467,7 +469,7 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
         return self._test_inv_quad_logdet(reduce_inv_quad=True, cholesky=True)
 
     def test_prod(self):
-        with gpytorch.settings.fast_computations(covar_root_decomposition=False):
+        with settings.fast_computations(covar_root_decomposition=False):
             lazy_tensor = self.create_lazy_tensor()
             evaluated = self.evaluate_lazy_tensor(lazy_tensor)
 
@@ -477,11 +479,11 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
                 self.assertAllClose(lazy_tensor.prod(-4).evaluate(), evaluated.prod(-4), atol=1e-2, rtol=1e-2)
 
     def test_root_decomposition(self, cholesky=False):
-        _wrapped_lanczos = MagicMock(wraps=gpytorch.utils.lanczos.lanczos_tridiag)
-        with patch("gpytorch.utils.lanczos.lanczos_tridiag", new=_wrapped_lanczos) as lanczos_mock:
+        _wrapped_lanczos = MagicMock(wraps=lanczos_tridiag)
+        with patch("lanczos_tridiag", new=_wrapped_lanczos) as lanczos_mock:
             lazy_tensor = self.create_lazy_tensor()
             test_mat = torch.randn(*lazy_tensor.batch_shape, lazy_tensor.size(-1), 5)
-            with gpytorch.settings.max_cholesky_size(math.inf if cholesky else 0):
+            with settings.max_cholesky_size(math.inf if cholesky else 0):
                 root_approx = lazy_tensor.root_decomposition()
                 res = root_approx.matmul(test_mat)
                 actual = lazy_tensor.matmul(test_mat)
@@ -531,7 +533,7 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
         lhs_copy = lhs.clone().detach().requires_grad_(True)
 
         # Perform forward pass
-        with gpytorch.settings.max_cg_iterations(200):
+        with settings.max_cg_iterations(200):
             sqrt_inv_matmul_res, inv_quad_res = lazy_tensor.sqrt_inv_matmul(rhs, lhs)
         evals, evecs = evaluated.symeig(eigenvectors=True)
         matrix_inv_root = evecs @ (evals.sqrt().reciprocal().unsqueeze(-1) * evecs.transpose(-1, -2))
@@ -569,7 +571,7 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
         rhs_copy = rhs.clone().detach().requires_grad_(True)
 
         # Perform forward pass
-        with gpytorch.settings.max_cg_iterations(200):
+        with settings.max_cg_iterations(200):
             sqrt_inv_matmul_res = lazy_tensor.sqrt_inv_matmul(rhs)
         evals, evecs = evaluated.symeig(eigenvectors=True)
         matrix_inv_root = evecs @ (evals.sqrt().reciprocal().unsqueeze(-1) * evecs.transpose(-1, -2))

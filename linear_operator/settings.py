@@ -112,7 +112,7 @@ class _fast_covar_root_decomposition(_feature_flag):
         Setting this to False will compute a complete Cholesky decomposition of covariance matrices.
         This may be infeasible for GPs with structure covariance matrices.
 
-    See also: :class:`gpytorch.settings.max_root_decomposition_size` (to control the
+    See also: :class:`max_root_decomposition_size` (to control the
     size of the low rank decomposition used).
     """
 
@@ -136,7 +136,7 @@ class _fast_log_prob(_feature_flag):
         Setting this to False will compute a complete Cholesky decomposition of covariance matrices.
         This may be infeasible for GPs with structure covariance matrices.
 
-    See also: :class:`gpytorch.settings.num_trace_samples` (to control the
+    See also: :class:`num_trace_samples` (to control the
     stochasticity of the fast `log_prob` estimates).
 
     .. _GPyTorch: Blackbox Matrix-Matrix Gaussian Process Inference with GPU Acceleration:
@@ -240,9 +240,9 @@ class fast_computations(object):
     Setting any of them to False will use exact computations instead.
 
     See also:
-        * :class:`gpytorch.settings.max_root_decomposition_size`
+        * :class:`max_root_decomposition_size`
             (to control the size of the low rank decomposition used)
-        * :class:`gpytorch.settings.num_trace_samples`
+        * :class:`num_trace_samples`
             (to control the stochasticity of the fast `log_prob` estimates)
 
     .. _GPyTorch Blackbox Matrix-Matrix Gaussian Process Inference with GPU Acceleration:
