@@ -1,0 +1,31 @@
+language: python
+
+branches:
+  only:
+    - master
+
+python:
+  - "3.6"
+env:
+  - PYTORCH_VERSION=master
+  - PYTORCH_VERSION=stable
+
+install:
+  - pip install scipy;
+  - if [[ $PYTORCH_VERSION = "master" ]]; then
+      pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html;
+      python setup.py build develop;
+    else
+      pip install torch==1.6+cpu -f https://download.pytorch.org/whl/torch_stable.html;
+    fi
+
+script:
+  - python -c "import torch; print('PyTorch Version:', torch.__version__)"
+  - python -m unittest discover;
+
+matrix:
+  include:
+    - env: PRECOMMIT_CHECK
+      python: "3.6"
+      install: pip install pre-commit; pre-commit install; pre-commit run seed-isort-config || true
+      script: pre-commit run --files test/**/*.py gpytorch/**/*.py
