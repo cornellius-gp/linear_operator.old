@@ -52,6 +52,6 @@ setup(
     install_requires=install_requires,
     extras_require={
         "dev": ["black", "twine", "pre-commit"],
-        "test": ["flake8", "flake8-print", "pytest", "nbval"],
+        "test": ["flake8", "flake8-print"],
     },
 )
