@@ -6,7 +6,6 @@ import warnings
 import torch
 
 from linear_operator.test.base_test_case import BaseTestCase
-from linear_operator.test.utils import least_used_cuda_device
 from linear_operator.utils.cholesky import psd_safe_cholesky
 from linear_operator.utils.errors import NanError
 from linear_operator.utils.warnings import NumericalWarning
@@ -58,11 +57,6 @@ class TestPSDSafeCholesky(BaseTestCase, unittest.TestCase):
                 L_safe = psd_safe_cholesky(A, jitter=1e-2)
                 self.assertTrue(torch.allclose(L, L_safe))
 
-    def test_psd_safe_cholesky_pd_cuda(self, cuda=False):
-        if torch.cuda.is_available():
-            with least_used_cuda_device():
-                self.test_psd_safe_cholesky_pd(cuda=True)
-
     def test_psd_safe_cholesky_psd(self, cuda=False):
         device = torch.device("cuda") if cuda else torch.device("cpu")
         for dtype in (torch.float, torch.double):
@@ -96,11 +90,6 @@ class TestPSDSafeCholesky(BaseTestCase, unittest.TestCase):
                     self.assertTrue(any(issubclass(w_.category, NumericalWarning) for w_ in w))
                     self.assertTrue(any("A not p.d., added jitter" in str(w_.message) for w_ in w))
                 self.assertTrue(torch.allclose(L_exp, L_safe))
-
-    def test_psd_safe_cholesky_psd_cuda(self, cuda=False):
-        if torch.cuda.is_available():
-            with least_used_cuda_device():
-                self.test_psd_safe_cholesky_psd(cuda=True)
 
 
 if __name__ == "__main__":
