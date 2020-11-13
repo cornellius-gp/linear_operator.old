@@ -16,7 +16,7 @@ install:
       pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html;
       python setup.py build develop;
     else
-      pip install torch==1.6+cpu -f https://download.pytorch.org/whl/torch_stable.html;
+      pip install torch==1.7+cpu -f https://download.pytorch.org/whl/torch_stable.html;
     fi
 
 script:
@@ -27,5 +27,5 @@ matrix:
   include:
     - env: PRECOMMIT_CHECK
       python: "3.6"
-      install: pip install pre-commit; pre-commit install; pre-commit run seed-isort-config || true
-      script: pre-commit run --files test/**/*.py gpytorch/**/*.py
+      install: pip install pre-commit; pre-commit install
+      script: pre-commit run --files test/**/*.py linear_operator/**/*.py
