@@ -88,25 +88,35 @@ class MatmulLinearOperator(LinearOperator):
         right_vecs_times_right_linear_operator = self.right_linear_operator._matmul(right_vecs)
         left_vecs_times_left_linear_operator_t = self.left_linear_operator._t_matmul(left_vecs)
         left_grad = self.left_linear_operator._quad_form_derivative(left_vecs, right_vecs_times_right_linear_operator)
-        right_grad = self.right_linear_operator._quad_form_derivative(left_vecs_times_left_linear_operator_t, right_vecs)
+        right_grad = self.right_linear_operator._quad_form_derivative(
+            left_vecs_times_left_linear_operator_t, right_vecs
+        )
 
         left_grad = (left_grad,) if not isinstance(left_grad, tuple) else left_grad
         right_grad = (right_grad,) if not isinstance(right_grad, tuple) else right_grad
         return left_grad + right_grad
 
     def _permute_batch(self, *dims):
-        return self.__class__(self.left_linear_operator._permute_batch(*dims), self.right_linear_operator._permute_batch(*dims))
+        return self.__class__(
+            self.left_linear_operator._permute_batch(*dims), self.right_linear_operator._permute_batch(*dims)
+        )
 
     def _size(self):
         return _matmul_broadcast_shape(self.left_linear_operator.shape, self.right_linear_operator.shape)
 
     def _transpose_nonbatch(self, *args):
-        return self.__class__(self.right_linear_operator._transpose_nonbatch(), self.left_linear_operator._transpose_nonbatch())
+        return self.__class__(
+            self.right_linear_operator._transpose_nonbatch(), self.left_linear_operator._transpose_nonbatch()
+        )
 
     def diag(self):
-        if isinstance(self.left_linear_operator, NonLinearOperator) and isinstance(self.right_linear_operator, NonLinearOperator):
+        if isinstance(self.left_linear_operator, NonLinearOperator) and isinstance(
+            self.right_linear_operator, NonLinearOperator
+        ):
             return (self.left_linear_operator.tensor * self.right_linear_operator.tensor.transpose(-1, -2)).sum(-1)
-        elif isinstance(self.left_linear_operator, DiagLinearOperator) or isinstance(self.right_linear_operator, DiagLinearOperator):
+        elif isinstance(self.left_linear_operator, DiagLinearOperator) or isinstance(
+            self.right_linear_operator, DiagLinearOperator
+        ):
             return self.left_linear_operator.diag() * self.right_linear_operator.diag()
         else:
             return super().diag()

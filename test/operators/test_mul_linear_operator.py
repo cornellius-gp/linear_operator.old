@@ -25,7 +25,8 @@ class TestMulLinearOperator(LinearOperatorTestCase, unittest.TestCase):
     def evaluate_linear_operator(self, linear_operator):
         diag_tensor = linear_operator._diag_tensor.evaluate()
         res = torch.mul(
-            linear_operator._linear_operator.left_linear_operator.evaluate(), linear_operator._linear_operator.right_linear_operator.evaluate()
+            linear_operator._linear_operator.left_linear_operator.evaluate(),
+            linear_operator._linear_operator.right_linear_operator.evaluate(),
         )
         res = res + diag_tensor
         return res
@@ -57,7 +58,8 @@ class TestMulLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
     def evaluate_linear_operator(self, linear_operator):
         diag_tensor = linear_operator._diag_tensor.evaluate()
         res = torch.mul(
-            linear_operator._linear_operator.left_linear_operator.evaluate(), linear_operator._linear_operator.right_linear_operator.evaluate()
+            linear_operator._linear_operator.left_linear_operator.evaluate(),
+            linear_operator._linear_operator.right_linear_operator.evaluate(),
         )
         res = res + diag_tensor
         return res
@@ -90,7 +92,8 @@ class TestMulLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase)
     def evaluate_linear_operator(self, linear_operator):
         diag_tensor = linear_operator._diag_tensor.evaluate()
         res = torch.mul(
-            linear_operator._linear_operator.left_linear_operator.evaluate(), linear_operator._linear_operator.right_linear_operator.evaluate()
+            linear_operator._linear_operator.left_linear_operator.evaluate(),
+            linear_operator._linear_operator.right_linear_operator.evaluate(),
         )
         res = res + diag_tensor
         return res

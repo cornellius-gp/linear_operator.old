@@ -22,7 +22,7 @@ def rbf_kernel(x1, x2=None):
         x2 = x2.unsqueeze(-1)
 
     dist = (x1.unsqueeze(-2) - x2.unsqueeze(-3)).norm(p=2, dim=-1).pow(2)
-    return dist.div(-2.).exp()
+    return dist.div(-2.0).exp()
 
 
 class TestPivotedCholesky(unittest.TestCase):

@@ -33,15 +33,20 @@ class LinearOperator(ABC):
     A LinearOperator is an object that represents a tensor object, similar to :class:`torch.tensor`, but
     typically differs in two ways:
 
-    #. A tensor represented by a LinearOperator can typically be represented more efficiently than storing a full matrix.
-       For example, a LinearOperator representing :math:`K=XX^{\top}` where :math:`K` is :math:`n \times n` but
-       :math:`X` is :math:`n \times d` might store :math:`X` instead of :math:`K` directly.
-    #. A LinearOperator typically defines a matmul routine that performs :math:`KM` that is more efficient than storing
-       the full matrix. Using the above example, performing :math:`KM=X(X^{\top}M)` requires only :math:`O(nd)` time,
-       rather than the :math:`O(n^2)` time required if we were storing :math:`K` directly.
+    #. A tensor represented by a LinearOperator can typically be represented
+       more efficiently than storing a full matrix.  For example, a
+       LinearOperator representing :math:`K=XX^{\top}` where :math:`K` is
+       :math:`n \times n` but :math:`X` is :math:`n \times d` might store
+       :math:`X` instead of :math:`K` directly.
+    #. A LinearOperator typically defines a matmul routine that performs
+       :math:`KM` that is more efficient than storing the full matrix. Using the
+       above example, performing :math:`KM=X(X^{\top}M)` requires only
+       :math:`O(nd)` time, rather than the :math:`O(n^2)` time required if we
+       were storing :math:`K` directly.
 
     In order to define a new LinearOperator class, a user must define
-    at a minimum the following methods (in each example, :math:`K` denotes the matrix that the LinearOperator represents)
+    at a minimum the following methods (in each example, :math:`K` denotes the
+    matrix that the LinearOperator represents)
 
     * :func:`~LinearOperator._matmul`, which performs a matrix multiplication :math:`KM`
     * :func:`~LinearOperator._size`, which returns a :class:`torch.Size` containing the dimensions of
@@ -104,14 +109,17 @@ class LinearOperator(ABC):
     @abstractmethod
     def _matmul(self, rhs):
         """
-        Performs a matrix multiplication :math:`KM` with the matrix :math:`K` that this LinearOperator represents. Should
-        behave as :func:`torch.matmul`. If the LinearOperator represents a batch of matrices, this method should therefore
-        operate in batch mode as well.
+        Performs a matrix multiplication :math:`KM` with the matrix :math:`K`
+        that this LinearOperator represents. Should behave as
+        :func:`torch.matmul`. If the LinearOperator represents a batch of
+        matrices, this method should therefore operate in batch mode as well.
 
         ..note::
-            This method is intended to be used only internally by various Functions that support backpropagation
-            (e.g., :class:`Matmul`). Once this method is defined, it is strongly recommended that
-            one use :func:`~LinearOperator.matmul` instead, which makes use of this method properly.
+            This method is intended to be used only internally by various
+            Functions that support backpropagation (e.g., :class:`Matmul`).
+            Once this method is defined, it is strongly recommended that one
+            use :func:`~LinearOperator.matmul` instead, which makes use of this
+            method properly.
 
         Args:
             rhs (:obj:`torch.tensor`): the matrix :math:`M` to multiply with.
@@ -236,7 +244,9 @@ class LinearOperator(ABC):
         # Construct interpolated LinearOperator
         from . import InterpolatedLinearOperator
 
-        res = InterpolatedLinearOperator(self, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values)
+        res = InterpolatedLinearOperator(
+            self, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values
+        )
         return res._getitem(row_index, col_index, *batch_indices)
 
     def _unsqueeze_batch(self, dim):
@@ -464,7 +474,9 @@ class LinearOperator(ABC):
         else:
             left_linear_operator = self if self._root_decomposition_size() < other._root_decomposition_size() else other
             right_linear_operator = other if left_linear_operator is self else self
-            return MulLinearOperator(left_linear_operator.root_decomposition(), right_linear_operator.root_decomposition())
+            return MulLinearOperator(
+                left_linear_operator.root_decomposition(), right_linear_operator.root_decomposition()
+            )
 
     def _preconditioner(self):
         """
@@ -1164,10 +1176,11 @@ class LinearOperator(ABC):
         For a `b x n x m` LinearOperator, compute the product over the batch dimension.
 
         The `mul_batch_size` controls whether or not the batch dimension is grouped when multiplying.
-            * `mul_batch_size=None` (default): The entire batch dimension is multiplied. Returns a `n x n` LinearOperator.
+            * `mul_batch_size=None` (default): The entire batch dimension is
+                multiplied. Returns a `n x n` LinearOperator.
             * `mul_batch_size=k`: Creates `b/k` groups, and muls the `k` entries of this group.
-                (The LinearOperator is reshaped as a `b/k x k x n x m` LinearOperator and the `k` dimension is multiplied over.
-                Returns a `b/k x n x m` LinearOperator.
+                (The LinearOperator is reshaped as a `b/k x k x n x m`
+                LinearOperator and the `k` dimension is multiplied over.  Returns a `b/k x n x m` LinearOperator.
 
         Args:
             :attr:`mul_batch_size` (int or None):
@@ -1245,10 +1258,12 @@ class LinearOperator(ABC):
 
     def representation_tree(self):
         """
-        Returns a :obj:`LinearOperatorRepresentationTree` tree object that recursively encodes the
-        representation of this linear operator. In particular, if the definition of this linear operator depends on other
-        linear operators, the tree is an object that can be used to reconstruct the full structure of this linear operator,
-        including all subobjects. This is used internally.
+        Returns a :obj:`LinearOperatorRepresentationTree` tree object that
+        recursively encodes the representation of this linear operator. In
+        particular, if the definition of this linear operator depends on other
+        linear operators, the tree is an object that can be used to reconstruct
+        the full structure of this linear operator, including all subobjects.
+        This is used internally.
         """
         return LinearOperatorRepresentationTree(self)
 
@@ -1808,8 +1823,9 @@ class LinearOperator(ABC):
             expected_shape = _compute_getitem_size(self, index)
             if expected_shape != res.shape:
                 raise RuntimeError(
-                    "{}.__getitem__ failed! Expected a final shape of size {}, got {}. This is a bug with linear_operator, "
-                    "or your custom LinearOperator.".format(self.__class__.__name__, expected_shape, res.shape)
+                    f"{self.__class__.__name__}.__getitem__ failed! Expected a final shape of size "
+                    f"{expected_shape}, got {res.shape}. This is a bug with linear_operator, "
+                    "or your custom LinearOperator."
                 )
 
         # We're done!

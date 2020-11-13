@@ -44,8 +44,8 @@ class TestBlockInterleavedLinearOperatorBatch(LinearOperatorTestCase, unittest.T
         for i in range(2):
             for j in range(6):
                 for k in range(4):
-                    for l in range(4):
-                        actual[i, k * 6 + j, l * 6 + j] = blocks[i, j, k, l]
+                    for m in range(4):
+                        actual[i, k * 6 + j, m * 6 + j] = blocks[i, j, k, m]
         return actual
 
 
@@ -68,9 +68,9 @@ class TestBlockInterleavedLinearOperatorMultiBatch(LinearOperatorTestCase, unitt
         for i in range(2):
             for j in range(6):
                 for k in range(5):
-                    for l in range(4):
-                        for m in range(4):
-                            actual[i, k, l * 6 + j, m * 6 + j] = blocks[i, k, j, l, m]
+                    for m in range(4):
+                        for n in range(4):
+                            actual[i, k, m * 6 + j, n * 6 + j] = blocks[i, k, j, m, n]
         return actual
 
 

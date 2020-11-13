@@ -42,9 +42,9 @@ class TestInvQuadLogDetNonBatch(BaseTestCase, unittest.TestCase):
 
         # Compute values with LinearOperator
         _wrapped_cg = MagicMock(wraps=utils.linear_cg)
-        with settings.num_trace_samples(2000), settings.max_cholesky_size(
-            0
-        ), settings.cg_tolerance(1e-5), settings.skip_logdet_forward(improper_logdet), patch(
+        with settings.num_trace_samples(2000), settings.max_cholesky_size(0), settings.cg_tolerance(
+            1e-5
+        ), settings.skip_logdet_forward(improper_logdet), patch(
             "linear_operator.utils.linear_cg", new=_wrapped_cg
         ) as linear_cg_mock:
             linear_operator = RootLinearOperator(mat)

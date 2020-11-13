@@ -28,7 +28,9 @@ class TestKroneckerProductLinearOperator(LinearOperatorTestCase, unittest.TestCa
         a.requires_grad_(True)
         b.requires_grad_(True)
         c.requires_grad_(True)
-        kp_linear_operator = KroneckerProductLinearOperator(NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c))
+        kp_linear_operator = KroneckerProductLinearOperator(
+            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+        )
         return kp_linear_operator
 
     def evaluate_linear_operator(self, linear_operator):
@@ -47,7 +49,9 @@ class TestKroneckerProductLinearOperatorBatch(TestKroneckerProductLinearOperator
         a.requires_grad_(True)
         b.requires_grad_(True)
         c.requires_grad_(True)
-        kp_linear_operator = KroneckerProductLinearOperator(NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c))
+        kp_linear_operator = KroneckerProductLinearOperator(
+            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+        )
         return kp_linear_operator
 
 
@@ -58,7 +62,9 @@ class TestKroneckerProductLinearOperatorRectangular(RectangularLinearOperatorTes
         a = torch.randn(2, 3, requires_grad=True)
         b = torch.randn(5, 2, requires_grad=True)
         c = torch.randn(6, 4, requires_grad=True)
-        kp_linear_operator = KroneckerProductLinearOperator(NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c))
+        kp_linear_operator = KroneckerProductLinearOperator(
+            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+        )
         return kp_linear_operator
 
     def evaluate_linear_operator(self, linear_operator):
@@ -74,7 +80,9 @@ class TestKroneckerProductLinearOperatorRectangularMultiBatch(TestKroneckerProdu
         a = torch.randn(3, 4, 2, 3, requires_grad=True)
         b = torch.randn(3, 4, 5, 2, requires_grad=True)
         c = torch.randn(3, 4, 6, 4, requires_grad=True)
-        kp_linear_operator = KroneckerProductLinearOperator(NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c))
+        kp_linear_operator = KroneckerProductLinearOperator(
+            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+        )
         return kp_linear_operator
 
 

@@ -23,7 +23,9 @@ def cat(inputs, dim=0, output_device=None):
     if output_device is None and all(i.device == inputs[0].device for i in inputs):
         output_device = inputs[0].device
     elif output_device is None:
-        raise RuntimeError("Trying to concat linear operators on different devices without specifying an output device.")
+        raise RuntimeError(
+            "Trying to concat linear operators on different devices without specifying an output device."
+        )
 
     return CatLinearOperator(*inputs, dim=dim, output_device=output_device)
 
@@ -190,7 +192,8 @@ class CatLinearOperator(LinearOperator):
         if isinstance(cat_dim_indices, slice):
             if cat_dim_indices == _noop_index:
                 res_list = [
-                    linear_operator._getitem(row_index, col_index, *batch_indices) for linear_operator in self.linear_operators
+                    linear_operator._getitem(row_index, col_index, *batch_indices)
+                    for linear_operator in self.linear_operators
                 ]
 
             else:

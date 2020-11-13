@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-from . import (
-    settings,
-    operators,
-    utils,
-)
-
-from .operators import LinearOperator
-
+from . import operators, settings, utils
 from .functions import (  # Deprecated
     add_diag,
     add_jitter,
@@ -19,7 +12,7 @@ from .functions import (  # Deprecated
     root_decomposition,
     root_inv_decomposition,
 )
-from .operators import cat, to_dense, to_linear_operator
+from .operators import LinearOperator, cat, to_dense, to_linear_operator
 
 __version__ = "0.0.1"
 

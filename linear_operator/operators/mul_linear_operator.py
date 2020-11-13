@@ -10,7 +10,9 @@ from .root_linear_operator import RootLinearOperator
 
 class MulLinearOperator(LinearOperator):
     def _check_args(self, left_linear_operator, right_linear_operator):
-        if not isinstance(left_linear_operator, LinearOperator) or not isinstance(right_linear_operator, LinearOperator):
+        if not isinstance(left_linear_operator, LinearOperator) or not isinstance(
+            right_linear_operator, LinearOperator
+        ):
             return "MulLinearOperator expects two LinearOperators."
         if left_linear_operator.shape != right_linear_operator.shape:
             return "MulLinearOperator expects two LinearOperators of the same size: got {} and {}.".format(

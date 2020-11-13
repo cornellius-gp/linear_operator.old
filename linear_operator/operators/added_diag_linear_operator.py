@@ -25,14 +25,18 @@ class AddedDiagLinearOperator(SumLinearOperator):
 
     def __init__(self, *linear_operators, preconditioner_override=None):
         linear_operators = list(linear_operators)
-        super(AddedDiagLinearOperator, self).__init__(*linear_operators, preconditioner_override=preconditioner_override)
+        super(AddedDiagLinearOperator, self).__init__(
+            *linear_operators, preconditioner_override=preconditioner_override
+        )
         if len(linear_operators) > 2:
             raise RuntimeError("An AddedDiagLinearOperator can only have two components")
 
         broadcasting._mul_broadcast_shape(linear_operators[0].shape, linear_operators[1].shape)
 
         if isinstance(linear_operators[0], DiagLinearOperator) and isinstance(linear_operators[1], DiagLinearOperator):
-            raise RuntimeError("Trying to lazily add two DiagLinearOperators. Create a single DiagLinearOperator instead.")
+            raise RuntimeError(
+                "Trying to lazily add two DiagLinearOperators. Create a single DiagLinearOperator instead."
+            )
         elif isinstance(linear_operators[0], DiagLinearOperator):
             self._diag_tensor = linear_operators[0]
             self._linear_operator = linear_operators[1]
@@ -40,7 +44,9 @@ class AddedDiagLinearOperator(SumLinearOperator):
             self._diag_tensor = linear_operators[1]
             self._linear_operator = linear_operators[0]
         else:
-            raise RuntimeError("One of the LinearOperators input to AddedDiagLinearOperator must be a DiagLinearOperator!")
+            raise RuntimeError(
+                "One of the LinearOperators input to AddedDiagLinearOperator must be a DiagLinearOperator!"
+            )
 
         self.preconditioner_override = preconditioner_override
 

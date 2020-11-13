@@ -63,7 +63,9 @@ class BatchRepeatLinearOperator(LinearOperator):
         return batch_repeat
 
     def _expand_batch(self, batch_shape):
-        padding_dims = torch.Size(tuple(1 for _ in range(max(len(batch_shape) + 2 - self.base_linear_operator.dim(), 0))))
+        padding_dims = torch.Size(
+            tuple(1 for _ in range(max(len(batch_shape) + 2 - self.base_linear_operator.dim(), 0)))
+        )
         current_batch_shape = padding_dims + self.base_linear_operator.batch_shape
         return self.__class__(
             self.base_linear_operator, batch_repeat=self._compute_batch_repeat_size(current_batch_shape, batch_shape)
@@ -129,7 +131,9 @@ class BatchRepeatLinearOperator(LinearOperator):
             padded_base_batch_shape, batch_repeat = self.__batch_move_memo
             del self.__batch_move_memo
         else:
-            padding_dims = torch.Size(tuple(1 for _ in range(max(len(output_shape) - self.base_linear_operator.dim(), 0))))
+            padding_dims = torch.Size(
+                tuple(1 for _ in range(max(len(output_shape) - self.base_linear_operator.dim(), 0)))
+            )
             padded_base_batch_shape = padding_dims + self.base_linear_operator.batch_shape
             batch_repeat = self._compute_batch_repeat_size(padded_base_batch_shape, output_shape[:-2])
 
@@ -223,13 +227,17 @@ class BatchRepeatLinearOperator(LinearOperator):
         batch_repeat = torch.Size(batch_repeat)
         # If the dim only adds a new padded dimension, then we're done
         # Otherwise we have to also unsqueeze the base_linear_operator
-        base_unsqueeze_dim = dim - (len(self.base_linear_operator.batch_shape) - len(self.base_linear_operator.batch_shape))
+        base_unsqueeze_dim = dim - (
+            len(self.base_linear_operator.batch_shape) - len(self.base_linear_operator.batch_shape)
+        )
         if base_unsqueeze_dim > 0:
             base_linear_operator = base_linear_operator._unsqueeze_batch(base_unsqueeze_dim)
         return self.__class__(base_linear_operator, batch_repeat=batch_repeat)
 
     def add_jitter(self, jitter_val=1e-3):
-        return self.__class__(self.base_linear_operator.add_jitter(jitter_val=jitter_val), batch_repeat=self.batch_repeat)
+        return self.__class__(
+            self.base_linear_operator.add_jitter(jitter_val=jitter_val), batch_repeat=self.batch_repeat
+        )
 
     def inv_quad_logdet(self, inv_quad_rhs=None, logdet=False, reduce_inv_quad=True):
         if not self.is_square:
@@ -255,7 +263,9 @@ class BatchRepeatLinearOperator(LinearOperator):
             output_shape = _matmul_broadcast_shape(self.shape, inv_quad_rhs.shape)
             inv_quad_rhs = self._move_repeat_batches_to_columns(inv_quad_rhs, output_shape)
 
-        inv_quad_term, logdet_term = self.base_linear_operator.inv_quad_logdet(inv_quad_rhs, logdet, reduce_inv_quad=False)
+        inv_quad_term, logdet_term = self.base_linear_operator.inv_quad_logdet(
+            inv_quad_rhs, logdet, reduce_inv_quad=False
+        )
 
         if inv_quad_term is not None and inv_quad_term.numel():
             inv_quad_term = inv_quad_term.view(*inv_quad_term.shape[:-1], -1, 1, self.batch_repeat.numel())

@@ -129,7 +129,9 @@ def contour_integral_quad(
     # Compute the solves at the given shifts
     # Do one more matmul if we don't want to include the inverse
     with torch.no_grad():
-        solves = minres(lambda v: linear_operator._matmul(v), rhs, value=-1, shifts=shifts, preconditioner=preconditioner)
+        solves = minres(
+            lambda v: linear_operator._matmul(v), rhs, value=-1, shifts=shifts, preconditioner=preconditioner
+        )
     no_shift_solves = solves[0]
     solves = solves[1:]
     if not inverse:

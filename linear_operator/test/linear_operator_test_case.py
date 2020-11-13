@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import torch
 
-from .base_test_case import BaseTestCase
-from ..operators import to_dense, LinearOperator
 from .. import settings
+from ..operators import LinearOperator, to_dense
 from ..utils import linear_cg
 from ..utils.lanczos import lanczos_tridiag
+from .base_test_case import BaseTestCase
 
 
 def _ensure_symmetric_grad(grad):

@@ -70,7 +70,8 @@ class CachedCGLinearOperator(LinearOperator):
                     )
                 else:
                     all_solves = base_linear_operator._solve(
-                        torch.cat([probe_vectors, eager_rhs], -1), preconditioner=base_linear_operator._preconditioner()[0]
+                        torch.cat([probe_vectors, eager_rhs], -1),
+                        preconditioner=base_linear_operator._preconditioner()[0],
                     )
                     probe_vector_tmats = torch.tensor([])
                 probe_vector_solves = all_solves[..., : probe_vectors.size(-1)].detach()
@@ -87,7 +88,9 @@ class CachedCGLinearOperator(LinearOperator):
             else:
                 # Compute solves
                 if settings.fast_computations.log_prob.on():
-                    solves = base_linear_operator._solve(eager_rhs, preconditioner=base_linear_operator._preconditioner()[0])
+                    solves = base_linear_operator._solve(
+                        eager_rhs, preconditioner=base_linear_operator._preconditioner()[0]
+                    )
                 else:
                     solves = base_linear_operator.cholesky()._cholesky_solve(eager_rhs)
                 dtype = solves.dtype

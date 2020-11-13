@@ -38,7 +38,9 @@ class TestCachedCGLinearOperatorNoLogdet(LinearOperatorTestCase, unittest.TestCa
             probe_vec_solves = torch.tensor([], dtype=mat.dtype, device=mat.device)
             tmats = torch.tensor([], dtype=mat.dtype, device=mat.device)
 
-        return CachedCGLinearOperator(linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats)
+        return CachedCGLinearOperator(
+            linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats
+        )
 
     def evaluate_linear_operator(self, linear_operator):
         return linear_operator.base_linear_operator.tensor
@@ -238,7 +240,9 @@ class TestCachedCGLinearOperatorNoLogdetBatch(TestCachedCGLinearOperatorNoLogdet
             probe_vec_solves = torch.tensor([], dtype=mat.dtype, device=mat.device)
             tmats = torch.tensor([], dtype=mat.dtype, device=mat.device)
 
-        return CachedCGLinearOperator(linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats)
+        return CachedCGLinearOperator(
+            linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats
+        )
 
 
 class TestCachedCGLinearOperatorBatch(TestCachedCGLinearOperator):
@@ -266,7 +270,9 @@ class TestCachedCGLinearOperatorBatch(TestCachedCGLinearOperator):
             probe_vec_solves = torch.tensor([], dtype=mat.dtype, device=mat.device)
             tmats = torch.tensor([], dtype=mat.dtype, device=mat.device)
 
-        return CachedCGLinearOperator(linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats)
+        return CachedCGLinearOperator(
+            linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats
+        )
 
 
 class TestCachedCGLinearOperatorMultiBatch(TestCachedCGLinearOperator):
@@ -297,4 +303,6 @@ class TestCachedCGLinearOperatorMultiBatch(TestCachedCGLinearOperator):
             probe_vec_solves = torch.tensor([], dtype=mat.dtype, device=mat.device)
             tmats = torch.tensor([], dtype=mat.dtype, device=mat.device)
 
-        return CachedCGLinearOperator(linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats)
+        return CachedCGLinearOperator(
+            linear_operator, eager_rhss, solves, probe_vecs, probe_vec_norms, probe_vec_solves, tmats
+        )

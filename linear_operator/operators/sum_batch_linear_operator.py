@@ -58,4 +58,6 @@ class SumBatchLinearOperator(BlockLinearOperator):
         return diag
 
     def evaluate(self):
-        return self.base_linear_operator.evaluate().sum(dim=-3)  # BlockLinearOperators always use dim3 for the block_dim
+        return self.base_linear_operator.evaluate().sum(
+            dim=-3
+        )  # BlockLinearOperators always use dim3 for the block_dim

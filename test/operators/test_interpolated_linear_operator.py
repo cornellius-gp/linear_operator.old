@@ -78,7 +78,9 @@ class TestInterpolatedLinearOperatorBatch(LinearOperatorTestCase, unittest.TestC
             left_matrix_comp = torch.zeros(4, 6)
             right_matrix_comp = torch.zeros(4, 6)
             left_matrix_comp.scatter_(1, linear_operator.left_interp_indices[i], linear_operator.left_interp_values[i])
-            right_matrix_comp.scatter_(1, linear_operator.right_interp_indices[i], linear_operator.right_interp_values[i])
+            right_matrix_comp.scatter_(
+                1, linear_operator.right_interp_indices[i], linear_operator.right_interp_values[i]
+            )
             left_matrix_comps.append(left_matrix_comp.unsqueeze(0))
             right_matrix_comps.append(right_matrix_comp.unsqueeze(0))
         left_matrix = torch.cat(left_matrix_comps)

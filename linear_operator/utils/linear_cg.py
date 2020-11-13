@@ -313,7 +313,9 @@ def linear_cg(
             " which is larger than the tolerance of {} specified by"
             " linear_operator.settings.cg_tolerance."
             " If performance is affected, consider raising the maximum number of CG iterations by running code in"
-            " a linear_operator.settings.max_cg_iterations(value) context.".format(k + 1, residual_norm.mean(), tolerance),
+            " a linear_operator.settings.max_cg_iterations(value) context.".format(
+                k + 1, residual_norm.mean(), tolerance
+            ),
             NumericalWarning,
         )
 

@@ -146,7 +146,9 @@ class KroneckerProductLinearOperator(LinearOperator):
         return KroneckerProductTriangularLinearOperator(*chol_factors, upper=upper)
 
     def _expand_batch(self, batch_shape):
-        return self.__class__(*[linear_operator._expand_batch(batch_shape) for linear_operator in self.linear_operators])
+        return self.__class__(
+            *[linear_operator._expand_batch(batch_shape) for linear_operator in self.linear_operators]
+        )
 
     def _get_indices(self, row_index, col_index, *batch_indices):
         row_factor = self.size(-2)
@@ -239,13 +241,17 @@ class KroneckerProductLinearOperator(LinearOperator):
         return res
 
     def _transpose_nonbatch(self):
-        return self.__class__(*(linear_operator._transpose_nonbatch() for linear_operator in self.linear_operators), **self._kwargs)
+        return self.__class__(
+            *(linear_operator._transpose_nonbatch() for linear_operator in self.linear_operators), **self._kwargs
+        )
 
 
 class KroneckerProductTriangularLinearOperator(KroneckerProductLinearOperator):
     def __init__(self, *linear_operators, upper=False):
         if not all(isinstance(lt, TriangularLinearOperator) for lt in linear_operators):
-            raise RuntimeError("Components of KroneckerProductTriangularLinearOperator must be TriangularLinearOperator.")
+            raise RuntimeError(
+                "Components of KroneckerProductTriangularLinearOperator must be TriangularLinearOperator."
+            )
         super().__init__(*linear_operators)
         self.upper = upper
 

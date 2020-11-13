@@ -29,11 +29,16 @@ class SumLinearOperator(LinearOperator):
         return self.__class__(*expanded_tensors)
 
     def _get_indices(self, row_index, col_index, *batch_indices):
-        results = [linear_operator._get_indices(row_index, col_index, *batch_indices) for linear_operator in self.linear_operators]
+        results = [
+            linear_operator._get_indices(row_index, col_index, *batch_indices)
+            for linear_operator in self.linear_operators
+        ]
         return sum(results)
 
     def _getitem(self, row_index, col_index, *batch_indices):
-        results = [linear_operator._getitem(row_index, col_index, *batch_indices) for linear_operator in self.linear_operators]
+        results = [
+            linear_operator._getitem(row_index, col_index, *batch_indices) for linear_operator in self.linear_operators
+        ]
         return SumLinearOperator(*results)
 
     def _matmul(self, rhs):
@@ -41,7 +46,9 @@ class SumLinearOperator(LinearOperator):
 
     def _quad_form_derivative(self, left_vecs, right_vecs):
         return tuple(
-            var for linear_operator in self.linear_operators for var in linear_operator._quad_form_derivative(left_vecs, right_vecs)
+            var
+            for linear_operator in self.linear_operators
+            for var in linear_operator._quad_form_derivative(left_vecs, right_vecs)
         )
 
     def _size(self):

@@ -6,7 +6,12 @@ from unittest import mock
 import torch
 
 from linear_operator import settings
-from linear_operator.operators import DiagLinearOperator, KroneckerProductAddedDiagLinearOperator, KroneckerProductLinearOperator, NonLinearOperator
+from linear_operator.operators import (
+    DiagLinearOperator,
+    KroneckerProductAddedDiagLinearOperator,
+    KroneckerProductLinearOperator,
+    NonLinearOperator,
+)
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
@@ -23,7 +28,9 @@ class TestKroneckerProductAddedDiagLinearOperator(unittest.TestCase, LinearOpera
         a.requires_grad_(True)
         b.requires_grad_(True)
         c.requires_grad_(True)
-        kp_linear_operator = KroneckerProductLinearOperator(NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c))
+        kp_linear_operator = KroneckerProductLinearOperator(
+            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+        )
 
         return KroneckerProductAddedDiagLinearOperator(
             kp_linear_operator, DiagLinearOperator(0.1 * torch.ones(kp_linear_operator.shape[-1]))

@@ -34,7 +34,8 @@ class TriangularLinearOperator(LinearOperator):
             # things get kind of messy when interleaving repeats and triangualrisms
             if not isinstance(tensor.base_linear_operator, TriangularLinearOperator):
                 tensor = tensor.__class__(
-                    TriangularLinearOperator(tensor.base_linear_operator, upper=upper), batch_repeat=tensor.batch_repeat,
+                    TriangularLinearOperator(tensor.base_linear_operator, upper=upper),
+                    batch_repeat=tensor.batch_repeat,
                 )
         if torch.is_tensor(tensor):
             tensor = NonLinearOperator(tensor)

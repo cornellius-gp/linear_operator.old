@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import unittest
-import torch
 
+import torch
 
 from linear_operator import utils
 

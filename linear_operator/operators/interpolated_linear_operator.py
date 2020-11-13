@@ -295,7 +295,8 @@ class InterpolatedLinearOperator(LinearOperator):
 
     def _size(self):
         return torch.Size(
-            self.base_linear_operator.batch_shape + (self.left_interp_indices.size(-2), self.right_interp_indices.size(-2))
+            self.base_linear_operator.batch_shape
+            + (self.left_interp_indices.size(-2), self.right_interp_indices.size(-2))
         )
 
     def _transpose_nonbatch(self):
@@ -375,7 +376,9 @@ class InterpolatedLinearOperator(LinearOperator):
         )
 
     def diag(self):
-        if isinstance(self.base_linear_operator, RootLinearOperator) and isinstance(self.base_linear_operator.root, NonLinearOperator):
+        if isinstance(self.base_linear_operator, RootLinearOperator) and isinstance(
+            self.base_linear_operator.root, NonLinearOperator
+        ):
             left_interp_vals = left_interp(
                 self.left_interp_indices, self.left_interp_values, self.base_linear_operator.root.evaluate()
             )

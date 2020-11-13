@@ -58,30 +58,18 @@ class Interpolation(object):
         if lt_min_mask.sum().item():
             first_out_of_range = lt_min_mask.nonzero(as_tuple=False).squeeze(1)[0].item()
             raise RuntimeError(
-                (
-                    "Received data that was out of bounds for the specified grid. "
-                    "Grid bounds were ({0:.3f}, {0:.3f}), but min = {0:.3f}, "
-                    "max = {0:.3f}"
-                ).format(
-                    grid_mins[first_out_of_range].item(),
-                    grid_maxs[first_out_of_range].item(),
-                    x_target_min[first_out_of_range].item(),
-                    x_target_max[first_out_of_range].item(),
-                )
+                "Received data that was out of bounds for the specified grid. "
+                f"Grid bounds were ({grid_mins[first_out_of_range].item()}, "
+                f"{grid_maxs[first_out_of_range].item()}), but min = {x_target_min[first_out_of_range].item()}, "
+                f"max = {x_target_max[first_out_of_range].item()}"
             )
         if gt_max_mask.sum().item():
             first_out_of_range = gt_max_mask.nonzero(as_tuple=False).squeeze(1)[0].item()
             raise RuntimeError(
-                (
-                    "Received data that was out of bounds for the specified grid. "
-                    "Grid bounds were ({0:.3f}, {0:.3f}), but min = {0:.3f}, "
-                    "max = {0:.3f}"
-                ).format(
-                    grid_mins[first_out_of_range].item(),
-                    grid_maxs[first_out_of_range].item(),
-                    x_target_min[first_out_of_range].item(),
-                    x_target_max[first_out_of_range].item(),
-                )
+                "Received data that was out of bounds for the specified grid. "
+                f"Grid bounds were ({grid_mins[first_out_of_range].item()}, "
+                f"{grid_maxs[first_out_of_range].item()}), but min = {x_target_min[first_out_of_range].item()}, "
+                f"max = {x_target_max[first_out_of_range].item()}"
             )
 
         # Now do interpolation

@@ -22,7 +22,9 @@ class KroneckerProductAddedDiagLinearOperator(AddedDiagLinearOperator):
             self.diag_tensor = linear_operators[1]
             self.linear_operator = linear_operators[0]
         else:
-            raise RuntimeError("One of the LinearOperators input to AddedDiagLinearOperator must be a DiagLinearOperator!")
+            raise RuntimeError(
+                "One of the LinearOperators input to AddedDiagLinearOperator must be a DiagLinearOperator!"
+            )
 
     def inv_quad_logdet(self, inv_quad_rhs=None, logdet=False, reduce_inv_quad=True):
         # we want to call the standard InvQuadLogDet to easily get the probe vectors and do the
