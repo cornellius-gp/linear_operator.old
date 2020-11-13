@@ -29,7 +29,7 @@ class RootDecomposition(Function):
         :return: :attr:`R`, such that :math:`R R^T \approx A`, and :attr:`R_inv`, such that
             :math:`R_{inv} R_{inv}^T \approx A^{-1}` (will only be populated if self.inverse = True)
         """
-        from ..lazy import lazify
+        from ..operators import to_linear_operator
 
         ctx.representation_tree = representation_tree
         ctx.device = device
@@ -42,8 +42,8 @@ class RootDecomposition(Function):
         ctx.initial_vectors = initial_vectors
 
         # Get closure for matmul
-        lazy_tsr = ctx.representation_tree(*matrix_args)
-        matmul_closure = lazy_tsr._matmul
+        linear_op = ctx.representation_tree(*matrix_args)
+        matmul_closure = linear_op._matmul
         # Do lanczos
         q_mat, t_mat = lanczos.lanczos_tridiag(
             matmul_closure,
@@ -63,7 +63,7 @@ class RootDecomposition(Function):
             t_mat = t_mat.unsqueeze(0)
         n_probes = t_mat.size(0)
 
-        mins = lazify(t_mat).diag().min(dim=-1, keepdim=True)[0].unsqueeze(-1)
+        mins = to_linear_operator(t_mat).diag().min(dim=-1, keepdim=True)[0].unsqueeze(-1)
         jitter_mat = (settings.tridiagonal_jitter.value() * mins) * torch.eye(
             t_mat.size(-1), device=t_mat.device, dtype=t_mat.dtype
         ).expand_as(t_mat)
@@ -83,7 +83,7 @@ class RootDecomposition(Function):
             root = q_mat * root_evals.unsqueeze(-2)
 
         if settings.memory_efficient.off():
-            ctx._lazy_tsr = lazy_tsr
+            ctx._linear_op = linear_op
 
         if ctx.batch_shape is None:
             root = root.squeeze(1) if root.numel() else root
@@ -139,10 +139,10 @@ class RootDecomposition(Function):
                     is_batch = True
 
             # Get closure for matmul
-            if hasattr(ctx, "_lazy_tsr"):
-                lazy_tsr = ctx._lazy_tsr
+            if hasattr(ctx, "_linear_op"):
+                linear_op = ctx._linear_op
             else:
-                lazy_tsr = ctx.representation_tree(*matrix_args)
+                linear_op = ctx.representation_tree(*matrix_args)
 
             # Get root inverse
             if not ctx.inverse:
@@ -167,7 +167,7 @@ class RootDecomposition(Function):
             else:
                 left_factor = left_factor.contiguous()
                 right_factor = right_factor.contiguous()
-            res = lazy_tsr._quad_form_derivative(left_factor, right_factor)
+            res = linear_op._quad_form_derivative(left_factor, right_factor)
 
             return tuple([None] * 9 + list(res))
         else:

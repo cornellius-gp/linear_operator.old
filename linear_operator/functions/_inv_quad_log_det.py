@@ -62,9 +62,9 @@ class InvQuadLogDet(Function):
             matrix_args = args
 
         # Get closure for matmul
-        lazy_tsr = ctx.representation_tree(*matrix_args)
+        linear_op = ctx.representation_tree(*matrix_args)
         with torch.no_grad():
-            preconditioner, precond_lt, logdet_correction = lazy_tsr._preconditioner()
+            preconditioner, precond_lt, logdet_correction = linear_op._preconditioner()
 
         ctx.preconditioner = preconditioner
 
@@ -158,14 +158,14 @@ class InvQuadLogDet(Function):
         rhs = torch.cat(rhs_list, -1)
         t_mat = None
         if ctx.logdet and settings.skip_logdet_forward.off():
-            solves, t_mat = lazy_tsr._solve(rhs, preconditioner, num_tridiag=num_random_probes)
+            solves, t_mat = linear_op._solve(rhs, preconditioner, num_tridiag=num_random_probes)
 
         else:
-            solves = lazy_tsr._solve(rhs, preconditioner, num_tridiag=0)
+            solves = linear_op._solve(rhs, preconditioner, num_tridiag=0)
 
         # Final values to return
-        logdet_term = torch.zeros(lazy_tsr.batch_shape, dtype=ctx.dtype, device=ctx.device)
-        inv_quad_term = torch.zeros(lazy_tsr.batch_shape, dtype=ctx.dtype, device=ctx.device)
+        logdet_term = torch.zeros(linear_op.batch_shape, dtype=ctx.dtype, device=ctx.device)
+        inv_quad_term = torch.zeros(linear_op.batch_shape, dtype=ctx.dtype, device=ctx.device)
 
         # Compute logdet from tridiagonalization
         if ctx.logdet and settings.skip_logdet_forward.off():
@@ -194,7 +194,7 @@ class InvQuadLogDet(Function):
         ctx.save_for_backward(*to_save)
 
         if settings.memory_efficient.off():
-            ctx._lazy_tsr = lazy_tsr
+            ctx._linear_op = linear_op
 
         return inv_quad_term, logdet_term
 
@@ -211,10 +211,10 @@ class InvQuadLogDet(Function):
         matrix_args = ctx.saved_tensors[:-1]
         solves = ctx.saved_tensors[-1]
 
-        if hasattr(ctx, "_lazy_tsr"):
-            lazy_tsr = ctx._lazy_tsr
+        if hasattr(ctx, "_linear_op"):
+            linear_op = ctx._linear_op
         else:
-            lazy_tsr = ctx.representation_tree(*matrix_args)
+            linear_op = ctx.representation_tree(*matrix_args)
 
         # Fix grad_output sizes
         if ctx.inv_quad:
@@ -254,7 +254,7 @@ class InvQuadLogDet(Function):
 
             left_factors = torch.cat(left_factors_list, -1)
             right_factors = torch.cat(right_factors_list, -1)
-            matrix_arg_grads = lazy_tsr._quad_form_derivative(left_factors, right_factors)
+            matrix_arg_grads = linear_op._quad_form_derivative(left_factors, right_factors)
 
         # input_2 gradients
         if compute_inv_quad_grad and ctx.needs_input_grad[9]:

@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import torch
 
-from gpytorch.utils import fft
+from linear_operator.utils import fft
 
 
 class TestFFT(unittest.TestCase):

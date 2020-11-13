@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 from . import (
-    lazy,
     settings,
+    operators,
     utils,
 )
+
+from .operators import LinearOperator
 
 from .functions import (  # Deprecated
     add_diag,
@@ -12,32 +14,32 @@ from .functions import (  # Deprecated
     inv_matmul,
     inv_quad,
     inv_quad_logdet,
-    log_normal_cdf,
     logdet,
     matmul,
     root_decomposition,
     root_inv_decomposition,
 )
-from .lazy import cat, delazify, lazify
+from .operators import cat, to_dense, to_linear_operator
 
 __version__ = "0.0.1"
 
 __all__ = [
     # Submodules
-    "lazy",
+    "operators",
     "utils",
+    # Linear operators,
+    "LinearOperator",
     # Functions
     "add_diag",
     "add_jitter",
     "cat",
-    "delazify",
+    "to_dense",
     "dsmm",
     "inv_matmul",
     "inv_quad",
     "inv_quad_logdet",
-    "lazify",
+    "to_linear_operator",
     "logdet",
-    "log_normal_cdf",
     "matmul",
     "root_decomposition",
     "root_inv_decomposition",

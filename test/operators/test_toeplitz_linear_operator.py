@@ -4,56 +4,56 @@ import unittest
 
 import torch
 
-import gpytorch.utils.toeplitz as toeplitz
-from gpytorch.lazy import ToeplitzLazyTensor
-from gpytorch.test.lazy_tensor_test_case import LazyTensorTestCase
+import linear_operator.utils.toeplitz as toeplitz
+from linear_operator.operators import ToeplitzLinearOperator
+from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
-class TestToeplitzLazyTensor(LazyTensorTestCase, unittest.TestCase):
+class TestToeplitzLinearOperator(LinearOperatorTestCase, unittest.TestCase):
     seed = 1
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         toeplitz_column = torch.tensor([4, 0.5, 0, 1], dtype=torch.float, requires_grad=True)
-        return ToeplitzLazyTensor(toeplitz_column)
+        return ToeplitzLinearOperator(toeplitz_column)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
-        return toeplitz.sym_toeplitz(lazy_tensor.column)
+    def evaluate_linear_operator(self, linear_operator):
+        return toeplitz.sym_toeplitz(linear_operator.column)
 
 
-class TestToeplitzLazyTensorBatch(LazyTensorTestCase, unittest.TestCase):
+class TestToeplitzLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         toeplitz_column = torch.tensor([[2, -1, 0.5, 0.25], [4, 0.5, 0, 1]], dtype=torch.float, requires_grad=True)
-        return ToeplitzLazyTensor(toeplitz_column)
+        return ToeplitzLinearOperator(toeplitz_column)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return torch.cat(
             [
-                toeplitz.sym_toeplitz(lazy_tensor.column[0]).unsqueeze(0),
-                toeplitz.sym_toeplitz(lazy_tensor.column[1]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[0]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[1]).unsqueeze(0),
             ]
         )
 
 
-class TestToeplitzLazyTensorMultiBatch(LazyTensorTestCase, unittest.TestCase):
+class TestToeplitzLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         toeplitz_column = torch.tensor([[2, -1, 0.5, 0.25], [4, 0.5, 0, 1]], dtype=torch.float)
         toeplitz_column = toeplitz_column.repeat(3, 1, 1)
         toeplitz_column.requires_grad_(True)
-        return ToeplitzLazyTensor(toeplitz_column)
+        return ToeplitzLinearOperator(toeplitz_column)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return torch.cat(
             [
-                toeplitz.sym_toeplitz(lazy_tensor.column[0, 0]).unsqueeze(0),
-                toeplitz.sym_toeplitz(lazy_tensor.column[0, 1]).unsqueeze(0),
-                toeplitz.sym_toeplitz(lazy_tensor.column[1, 0]).unsqueeze(0),
-                toeplitz.sym_toeplitz(lazy_tensor.column[1, 1]).unsqueeze(0),
-                toeplitz.sym_toeplitz(lazy_tensor.column[2, 0]).unsqueeze(0),
-                toeplitz.sym_toeplitz(lazy_tensor.column[2, 1]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[0, 0]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[0, 1]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[1, 0]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[1, 1]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[2, 0]).unsqueeze(0),
+                toeplitz.sym_toeplitz(linear_operator.column[2, 1]).unsqueeze(0),
             ]
         ).view(3, 2, 4, 4)
 

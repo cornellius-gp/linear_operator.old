@@ -3,7 +3,6 @@
 import torch
 
 from ._dsmm import DSMM
-from ._log_normal_cdf import LogNormalCDF
 
 
 def add_diag(input, diag):
@@ -12,16 +11,16 @@ def add_diag(input, diag):
 
     Args:
         :attr:`input` (Tensor (nxn) or (bxnxn)):
-            Tensor or LazyTensor wrapping matrix to add diagonal component to.
+            Tensor or LinearOperator wrapping matrix to add diagonal component to.
         :attr:`diag` (scalar or Tensor (n) or Tensor (bxn) or Tensor (bx1)):
             Diagonal component to add to tensor
 
     Returns:
         :obj:`Tensor` (bxnxn or nxn)
     """
-    from ..lazy import lazify
+    from ..operators import to_linear_operator
 
-    return lazify(input).add_diag(diag)
+    return to_linear_operator(input).add_diag(diag)
 
 
 def add_jitter(mat, jitter_val=1e-3):
@@ -59,21 +58,11 @@ def dsmm(sparse_mat, dense_mat):
     return DSMM().apply(sparse_mat, dense_mat)
 
 
-def log_normal_cdf(x):
-    """
-    Computes the element-wise log standard normal CDF of an input tensor x.
-
-    This function should always be preferred over calling normal_cdf and taking the log
-    manually, as it is more numerically stable.
-    """
-    return LogNormalCDF().apply(x)
-
-
 def matmul(mat, rhs):
     """
     Computes a matrix multiplication between a matrix (mat) and a right hand side (rhs).
     If mat is a tensor, then this is the same as torch.matmul.
-    This function can work on lazy tensors though
+    This function can work on linear operators though
 
     Args:
         - mat (matrix nxn) - left hand size matrix
@@ -116,9 +105,9 @@ def inv_matmul(mat, right_tensor, left_tensor=None):
     Returns:
         - :obj:`torch.tensor` - :math:`A^{-1}R` or :math:`LA^{-1}R`.
     """
-    from ..lazy import lazify
+    from ..operators import to_linear_operator
 
-    return lazify(mat).inv_matmul(right_tensor, left_tensor)
+    return to_linear_operator(mat).inv_matmul(right_tensor, left_tensor)
 
 
 def inv_quad(mat, tensor):
@@ -149,9 +138,9 @@ def inv_quad_logdet(mat, inv_quad_rhs=None, logdet=False, reduce_inv_quad=True):
         - scalar - tr( tensor^T (mat)^{-1} tensor )
         - scalar - log determinant
     """
-    from ..lazy import lazify
+    from ..operators import to_linear_operator
 
-    return lazify(mat).inv_quad_logdet(inv_quad_rhs, logdet, reduce_inv_quad=reduce_inv_quad)
+    return to_linear_operator(mat).inv_quad_logdet(inv_quad_rhs, logdet, reduce_inv_quad=reduce_inv_quad)
 
 
 def logdet(mat):
@@ -167,24 +156,24 @@ def logdet(mat):
 
 def root_decomposition(mat):
     """
-    Returns a (usually low-rank) root decomposotion lazy tensor of a PSD matrix.
+    Returns a (usually low-rank) root decomposotion linear operator of a PSD matrix.
     This can be used for sampling from a Gaussian distribution, or for obtaining a
     low-rank version of a matrix
     """
-    from ..lazy import lazify
+    from ..operators import to_linear_operator
 
-    return lazify(mat).root_decomposition()
+    return to_linear_operator(mat).root_decomposition()
 
 
 def root_inv_decomposition(mat, initial_vectors=None, test_vectors=None):
     """
-    Returns a (usually low-rank) root decomposotion lazy tensor of a PSD matrix.
+    Returns a (usually low-rank) root decomposotion linear operator of a PSD matrix.
     This can be used for sampling from a Gaussian distribution, or for obtaining a
     low-rank version of a matrix
     """
-    from ..lazy import lazify
+    from ..operators import to_linear_operator
 
-    return lazify(mat).root_inv_decomposition(initial_vectors, test_vectors)
+    return to_linear_operator(mat).root_inv_decomposition(initial_vectors, test_vectors)
 
 
 __all__ = [

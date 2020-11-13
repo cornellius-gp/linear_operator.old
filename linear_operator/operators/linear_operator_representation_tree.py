@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 
-class LazyTensorRepresentationTree(object):
-    def __init__(self, lazy_tsr):
-        self._cls = lazy_tsr.__class__
-        self._kwargs = lazy_tsr._kwargs
+class LinearOperatorRepresentationTree(object):
+    def __init__(self, linear_op):
+        self._cls = linear_op.__class__
+        self._kwargs = linear_op._kwargs
 
         counter = 0
         self.children = []
-        for arg in lazy_tsr._args:
-            if hasattr(arg, "representation") and callable(arg.representation):  # Is it a lazy tensor?
+        for arg in linear_op._args:
+            if hasattr(arg, "representation") and callable(arg.representation):  # Is it a linear operator?
                 representation_size = len(arg.representation())
                 self.children.append((slice(counter, counter + representation_size, None), arg.representation_tree()))
                 counter += representation_size

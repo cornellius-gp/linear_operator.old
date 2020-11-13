@@ -23,60 +23,60 @@ from ..utils.getitem import _compute_getitem_size, _convert_indices_to_tensors, 
 from ..utils.memoize import add_to_cache, cached, pop_from_cache
 from ..utils.pivoted_cholesky import pivoted_cholesky
 from ..utils.warnings import NumericalWarning
-from .lazy_tensor_representation_tree import LazyTensorRepresentationTree
+from .linear_operator_representation_tree import LinearOperatorRepresentationTree
 
 
-class LazyTensor(ABC):
+class LinearOperator(ABC):
     r"""
-    Base class for LazyTensors.
+    Base class for LinearOperators.
 
-    A LazyTensor is an object that represents a tensor object, similar to :class:`torch.tensor`, but
+    A LinearOperator is an object that represents a tensor object, similar to :class:`torch.tensor`, but
     typically differs in two ways:
 
-    #. A tensor represented by a LazyTensor can typically be represented more efficiently than storing a full matrix.
-       For example, a LazyTensor representing :math:`K=XX^{\top}` where :math:`K` is :math:`n \times n` but
+    #. A tensor represented by a LinearOperator can typically be represented more efficiently than storing a full matrix.
+       For example, a LinearOperator representing :math:`K=XX^{\top}` where :math:`K` is :math:`n \times n` but
        :math:`X` is :math:`n \times d` might store :math:`X` instead of :math:`K` directly.
-    #. A LazyTensor typically defines a matmul routine that performs :math:`KM` that is more efficient than storing
+    #. A LinearOperator typically defines a matmul routine that performs :math:`KM` that is more efficient than storing
        the full matrix. Using the above example, performing :math:`KM=X(X^{\top}M)` requires only :math:`O(nd)` time,
        rather than the :math:`O(n^2)` time required if we were storing :math:`K` directly.
 
-    In order to define a new LazyTensor class that can be used as a covariance matrix in GPyTorch, a user must define
-    at a minimum the following methods (in each example, :math:`K` denotes the matrix that the LazyTensor represents)
+    In order to define a new LinearOperator class, a user must define
+    at a minimum the following methods (in each example, :math:`K` denotes the matrix that the LinearOperator represents)
 
-    * :func:`~LazyTensor._matmul`, which performs a matrix multiplication :math:`KM`
-    * :func:`~LazyTensor._size`, which returns a :class:`torch.Size` containing the dimensions of
+    * :func:`~LinearOperator._matmul`, which performs a matrix multiplication :math:`KM`
+    * :func:`~LinearOperator._size`, which returns a :class:`torch.Size` containing the dimensions of
       :math:`K`.
-    * :func:`~LazyTensor._transpose_nonbatch`, which returns a transposed version of the LazyTensor
+    * :func:`~LinearOperator._transpose_nonbatch`, which returns a transposed version of the LinearOperator
 
     In addition to these, the following methods should be implemented for maximum efficiency
 
-    * :func:`~LazyTensor._quad_form_derivative`, which computes the derivative of a quadratic form
-      with the LazyTensor (e.g. :math:`d (a^T X b) / dX`).
-    * :func:`~LazyTensor._get_indices`, which returns a :class:`torch.Tensor` containing elements that
+    * :func:`~LinearOperator._quad_form_derivative`, which computes the derivative of a quadratic form
+      with the LinearOperator (e.g. :math:`d (a^T X b) / dX`).
+    * :func:`~LinearOperator._get_indices`, which returns a :class:`torch.Tensor` containing elements that
       are given by various tensor indices.
-    * :func:`~LazyTensor._expand_batch`, which expands the batch dimensions of LazyTensors.
-    * :func:`~LazyTensor._check_args`, which performs error checking on the arguments supplied to the
-      LazyTensor constructor.
+    * :func:`~LinearOperator._expand_batch`, which expands the batch dimensions of LinearOperators.
+    * :func:`~LinearOperator._check_args`, which performs error checking on the arguments supplied to the
+      LinearOperator constructor.
 
-    In addition to these, a LazyTensor *may* need to define the following functions if it does anything interesting
+    In addition to these, a LinearOperator *may* need to define the following functions if it does anything interesting
     with the batch dimensions (e.g. sums along them, adds additional ones, etc):
-    :func:`~LazyTensor._unsqueeze_batch`, :func:`~LazyTensor._getitem`, and
-    :func:`~LazyTensor._permute_batch`.
+    :func:`~LinearOperator._unsqueeze_batch`, :func:`~LinearOperator._getitem`, and
+    :func:`~LinearOperator._permute_batch`.
     See the documentation for these methods for details.
 
     .. note::
-        The base LazyTensor class provides default implementations of many other operations in order to mimic the
+        The base LinearOperator class provides default implementations of many other operations in order to mimic the
         behavior of a standard tensor as closely as possible. For example, we provide default implementations of
-        :func:`~LazyTensor.__getitem__`, :func:`~LazyTensor.__add__`, etc that either
-        make use of other lazy tensors or exploit the functions that **must** be defined above.
+        :func:`~LinearOperator.__getitem__`, :func:`~LinearOperator.__add__`, etc that either
+        make use of other linear operators or exploit the functions that **must** be defined above.
 
         Rather than overriding the public methods, we recommend that you override the private versions associated
         with these methods (e.g. - write a custom `_getitem` verses a custom `__getitem__`). This is because the
         public methods do quite a bit of error checking and casing that doesn't need to be repeated.
 
     .. note::
-        LazyTensors are designed by default to optionally represent batches of matrices. Thus, the size of a
-        LazyTensor may be (for example) :math:`b \times n \times n`. Many of the methods are designed to efficiently
+        LinearOperators are designed by default to optionally represent batches of matrices. Thus, the size of a
+        LinearOperator may be (for example) :math:`b \times n \times n`. Many of the methods are designed to efficiently
         operate on these batches if present.
     """
 
@@ -99,19 +99,19 @@ class LazyTensor(ABC):
         self._kwargs = kwargs
 
     ####
-    # The following methods need to be defined by the LazyTensor
+    # The following methods need to be defined by the LinearOperator
     ####
     @abstractmethod
     def _matmul(self, rhs):
         """
-        Performs a matrix multiplication :math:`KM` with the matrix :math:`K` that this LazyTensor represents. Should
-        behave as :func:`torch.matmul`. If the LazyTensor represents a batch of matrices, this method should therefore
+        Performs a matrix multiplication :math:`KM` with the matrix :math:`K` that this LinearOperator represents. Should
+        behave as :func:`torch.matmul`. If the LinearOperator represents a batch of matrices, this method should therefore
         operate in batch mode as well.
 
         ..note::
             This method is intended to be used only internally by various Functions that support backpropagation
             (e.g., :class:`Matmul`). Once this method is defined, it is strongly recommended that
-            one use :func:`~LazyTensor.matmul` instead, which makes use of this method properly.
+            one use :func:`~LinearOperator.matmul` instead, which makes use of this method properly.
 
         Args:
             rhs (:obj:`torch.tensor`): the matrix :math:`M` to multiply with.
@@ -124,14 +124,14 @@ class LazyTensor(ABC):
     @abstractmethod
     def _size(self):
         """
-        Returns the size of the resulting Tensor that the lazy tensor represents.
+        Returns the size of the resulting Tensor that the linear operator represents.
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.size`,
+            This method is used internally by the related function :func:`~LinearOperator.size`,
             which does some additional work. Calling this method directly is discouraged.
 
         Returns:
-            :obj:`torch.Size`: The size of the matrix :math:`K` represented by this LazyTensor
+            :obj:`torch.Size`: The size of the matrix :math:`K` represented by this LinearOperator
         """
         raise NotImplementedError("The class {} requires a _size function!".format(self.__class__.__name__))
 
@@ -142,7 +142,7 @@ class LazyTensor(ABC):
         Implement this method, rather than transpose() or t().
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.transpose`, which
+            This method is used internally by the related function :func:`~LinearOperator.transpose`, which
             does some additional work. Calling this method directly is discouraged.
         """
         raise NotImplementedError(
@@ -150,17 +150,17 @@ class LazyTensor(ABC):
         )
 
     ####
-    # The following methods MIGHT have be over-written by LazyTensor subclasses
-    # if the LazyTensor does weird things with the batch dimensions
+    # The following methods MIGHT have be over-written by LinearOperator subclasses
+    # if the LinearOperator does weird things with the batch dimensions
     ####
     def _permute_batch(self, *dims):
         """
         Permute the batch dimensions.
-        This probably won't have to be overwritten by LazyTensors, unless they use batch dimensions
-        in a special way (e.g. BlockDiagLazyTensor, SumBatchLazyTensor)
+        This probably won't have to be overwritten by LinearOperators, unless they use batch dimensions
+        in a special way (e.g. BlockDiagLinearOperator, SumBatchLinearOperator)
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.unsqueeze`,
+            This method is used internally by the related function :func:`~LinearOperator.unsqueeze`,
             which does some additional work. Calling this method directly is discouraged.
 
         Args:
@@ -173,7 +173,7 @@ class LazyTensor(ABC):
             if torch.is_tensor(component):
                 extra_dims = range(len(dims), component.dim())
                 components.append(component.permute(*dims, *extra_dims))
-            elif isinstance(component, LazyTensor):
+            elif isinstance(component, LinearOperator):
                 components.append(component._permute_batch(*dims))
             else:
                 components.append(component)
@@ -183,18 +183,18 @@ class LazyTensor(ABC):
 
     def _getitem(self, row_index, col_index, *batch_indices):
         """
-        Supports subindexing of the matrix this LazyTensor represents.
+        Supports subindexing of the matrix this LinearOperator represents.
 
         The indices passed into this method will either be:
             Tensor indices
             Slices
 
         ..note::
-            LazyTensor.__getitem__ uses this as a helper method. If you are writing your own custom LazyTensor,
+            LinearOperator.__getitem__ uses this as a helper method. If you are writing your own custom LinearOperator,
             override this method rather than __getitem__ (so that you don't have to repeat the extra work)
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.__getitem__`,
+            This method is used internally by the related function :func:`~LinearOperator.__getitem__`,
             which does some additional work. Calling this method directly is discouraged.
 
         This method has a number of restrictions on the type of arguments that are passed in to reduce
@@ -205,14 +205,14 @@ class LazyTensor(ABC):
 
         Args:
             :attr:`row_index` (slice, Tensor):
-                Index for the row of the LazyTensor
+                Index for the row of the LinearOperator
             :attr:`col_index` (slice, Tensor):
-                Index for the col of the LazyTensor
+                Index for the col of the LinearOperator
             :attr:`batch_indices` (tuple of slice, int, Tensor):
                 Indices for the batch dimensions
 
         Returns:
-            `LazyTensor`
+            `LinearOperator`
         """
         # Special case: if both row and col are not indexed, then we are done
         if _is_noop_index(row_index) and _is_noop_index(col_index):
@@ -233,20 +233,20 @@ class LazyTensor(ABC):
         col_interp_indices = col_interp_indices.expand(*self.batch_shape, -1, 1)
         col_interp_values = torch.tensor(1.0, dtype=self.dtype, device=self.device).expand_as(col_interp_indices)
 
-        # Construct interpolated LazyTensor
-        from . import InterpolatedLazyTensor
+        # Construct interpolated LinearOperator
+        from . import InterpolatedLinearOperator
 
-        res = InterpolatedLazyTensor(self, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values)
+        res = InterpolatedLinearOperator(self, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values)
         return res._getitem(row_index, col_index, *batch_indices)
 
     def _unsqueeze_batch(self, dim):
         """
         Unsqueezes a batch dimension (positive-indexed only)
-        This probably won't have to be overwritten by LazyTensors, unless they use batch dimensions
-        in a special way (e.g. BlockDiagLazyTensor, SumBatchLazyTensor)
+        This probably won't have to be overwritten by LinearOperators, unless they use batch dimensions
+        in a special way (e.g. BlockDiagLinearOperator, SumBatchLinearOperator)
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.unsqueeze`,
+            This method is used internally by the related function :func:`~LinearOperator.unsqueeze`,
             which does some additional work. Calling this method directly is discouraged.
         """
         components = [component.unsqueeze(dim) for component in self._args]
@@ -254,14 +254,14 @@ class LazyTensor(ABC):
         return res
 
     ####
-    # The following methods PROBABLY should be over-written by LazyTensor subclasses for efficiency
+    # The following methods PROBABLY should be over-written by LinearOperator subclasses for efficiency
     ####
     def _expand_batch(self, batch_shape):
         """
         Expands along batch dimensions.
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.expand`,
+            This method is used internally by the related function :func:`~LinearOperator.expand`,
             which does some additional work. Calling this method directly is discouraged.
         """
         current_shape = torch.Size([1 for _ in range(len(batch_shape) - self.dim() + 2)] + list(self.batch_shape))
@@ -272,17 +272,17 @@ class LazyTensor(ABC):
 
     def _get_indices(self, row_index, col_index, *batch_indices):
         """
-        This method selects elements from the LazyTensor based on tensor indices for each dimension.
+        This method selects elements from the LinearOperator based on tensor indices for each dimension.
         All indices are tensor indices that are broadcastable.
-        There will be exactly one index per dimension of the LazyTensor
+        There will be exactly one index per dimension of the LinearOperator
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.__getitem__`,
+            This method is used internally by the related function :func:`~LinearOperator.__getitem__`,
             which does some additional work. Calling this method directly is discouraged.
 
         Args:
-            row_index (LongTensor): indices to select from row of LazyTensor
-            row_index (LongTensor): indices to select from col of LazyTensor
+            row_index (LongTensor): indices to select from row of LinearOperator
+            row_index (LongTensor): indices to select from col of LinearOperator
             batch_indices (tuple LongTensor): indices to select from batch dimensions.
 
         Returns:
@@ -293,7 +293,7 @@ class LazyTensor(ABC):
         col_index = col_index.expand(final_shape)
         batch_indices = tuple(index.expand(final_shape) for index in batch_indices)
 
-        base_lazy_tensor = self._getitem(_noop_index, _noop_index, *batch_indices)._expand_batch(final_shape)
+        base_linear_operator = self._getitem(_noop_index, _noop_index, *batch_indices)._expand_batch(final_shape)
 
         # Create some interoplation indices and values
         row_interp_indices = torch.arange(0, self.size(-2), dtype=torch.long, device=self.device)
@@ -304,12 +304,12 @@ class LazyTensor(ABC):
         col_interp_indices = col_interp_indices[col_index].unsqueeze_(-1).unsqueeze_(-1)
         col_interp_values = torch.tensor(1.0, dtype=self.dtype, device=self.device).expand_as(col_interp_indices)
 
-        # Construct interpolated LazyTensor
-        from . import InterpolatedLazyTensor
+        # Construct interpolated LinearOperator
+        from . import InterpolatedLinearOperator
 
         res = (
-            InterpolatedLazyTensor(
-                base_lazy_tensor, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values
+            InterpolatedLinearOperator(
+                base_linear_operator, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values
             )
             .evaluate()
             .squeeze(-2)
@@ -324,12 +324,12 @@ class LazyTensor(ABC):
 
         ..note::
             This method is intended to be used only internally by various Functions that support backpropagation.
-            For example, this method is used internally by :func:`~LazyTensor.inv_quad_logdet`. It is
+            For example, this method is used internally by :func:`~LinearOperator.inv_quad_logdet`. It is
             not likely that users will need to call this method directly.
 
         Returns:
             :obj:`torch.tensor`: derivative with respect to the arguments that are actually used to represent this
-                                   this LazyTensor.
+                                   this LinearOperator.
         """
         from collections import deque
 
@@ -362,7 +362,7 @@ class LazyTensor(ABC):
     _check_size = True
 
     ####
-    # Standard LazyTensor methods
+    # Standard LinearOperator methods
     ####
     @property
     def _args(self):
@@ -390,31 +390,31 @@ class LazyTensor(ABC):
     @cached(name="cholesky")
     def _cholesky(self, upper=False):
         """
-        (Optional) Cholesky-factorizes the LazyTensor
+        (Optional) Cholesky-factorizes the LinearOperator
 
         ..note::
             This method is used as an internal helper. Calling this method directly is discouraged.
 
         Returns:
-            (TriangularLazyTensor) Cholesky factor
+            (TriangularLinearOperator) Cholesky factor
         """
-        from .triangular_lazy_tensor import TriangularLazyTensor
-        from .keops_lazy_tensor import KeOpsLazyTensor
+        from .triangular_linear_operator import TriangularLinearOperator
+        from .keops_linear_operator import KeOpsLinearOperator
 
         evaluated_kern_mat = self.evaluate_kernel()
 
-        if any(isinstance(sub_mat, KeOpsLazyTensor) for sub_mat in evaluated_kern_mat._args):
+        if any(isinstance(sub_mat, KeOpsLinearOperator) for sub_mat in evaluated_kern_mat._args):
             raise RuntimeError("Cannot run Cholesky with KeOps: it will either be really slow or not work.")
 
         evaluated_mat = evaluated_kern_mat.evaluate()
 
         # if the tensor is a scalar, we can just take the square root
         if evaluated_mat.size(-1) == 1:
-            return TriangularLazyTensor(evaluated_mat.clamp_min(0.0).sqrt())
+            return TriangularLinearOperator(evaluated_mat.clamp_min(0.0).sqrt())
 
         # contiguous call is necessary here
         cholesky = psd_safe_cholesky(evaluated_mat, jitter=settings.cholesky_jitter.value(), upper=upper).contiguous()
-        return TriangularLazyTensor(cholesky, upper=upper)
+        return TriangularLinearOperator(cholesky, upper=upper)
 
     def _cholesky_solve(self, rhs, upper: bool = False):
         """
@@ -424,47 +424,47 @@ class LazyTensor(ABC):
             This method is used as an internal helper. Calling this method directly is discouraged.
 
         Returns:
-            (LazyTensor) Cholesky factor
+            (LinearOperator) Cholesky factor
         """
-        raise NotImplementedError("_cholesky_solve not implemented for the base LazyTensor")
+        raise NotImplementedError("_cholesky_solve not implemented for the base LinearOperator")
 
     def _mul_constant(self, other):
         """
-        Multiplies the LazyTensor by a costant.
+        Multiplies the LinearOperator by a costant.
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.mul`,
+            This method is used internally by the related function :func:`~LinearOperator.mul`,
             which does some additional work. Calling this method directly is discouraged.
 
         Returns:
-            :obj:`LazyTensor`
+            :obj:`LinearOperator`
         """
-        from .constant_mul_lazy_tensor import ConstantMulLazyTensor
+        from .constant_mul_linear_operator import ConstantMulLinearOperator
 
-        return ConstantMulLazyTensor(self, other)
+        return ConstantMulLinearOperator(self, other)
 
     def _mul_matrix(self, other):
         """
-        Multiplies the LazyTensor by a (batch of) matrices.
+        Multiplies the LinearOperator by a (batch of) matrices.
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.mul`,
+            This method is used internally by the related function :func:`~LinearOperator.mul`,
             which does some additional work. Calling this method directly is discouraged.
 
         Returns:
-            :obj:`LazyTensor`
+            :obj:`LinearOperator`
         """
-        from .non_lazy_tensor import NonLazyTensor
-        from .mul_lazy_tensor import MulLazyTensor
+        from .non_linear_operator import NonLinearOperator
+        from .mul_linear_operator import MulLinearOperator
 
         self = self.evaluate_kernel()
         other = other.evaluate_kernel()
-        if isinstance(self, NonLazyTensor) or isinstance(other, NonLazyTensor):
-            return NonLazyTensor(self.evaluate() * other.evaluate())
+        if isinstance(self, NonLinearOperator) or isinstance(other, NonLinearOperator):
+            return NonLinearOperator(self.evaluate() * other.evaluate())
         else:
-            left_lazy_tensor = self if self._root_decomposition_size() < other._root_decomposition_size() else other
-            right_lazy_tensor = other if left_lazy_tensor is self else self
-            return MulLazyTensor(left_lazy_tensor.root_decomposition(), right_lazy_tensor.root_decomposition())
+            left_linear_operator = self if self._root_decomposition_size() < other._root_decomposition_size() else other
+            right_linear_operator = other if left_linear_operator is self else self
+            return MulLinearOperator(left_linear_operator.root_decomposition(), right_linear_operator.root_decomposition())
 
     def _preconditioner(self):
         """
@@ -481,17 +481,17 @@ class LazyTensor(ABC):
 
     def _prod_batch(self, dim):
         """
-        Multiply the LazyTensor across a batch dimension (supplied as a positive number).
+        Multiply the LinearOperator across a batch dimension (supplied as a positive number).
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.prod`,
+            This method is used internally by the related function :func:`~LinearOperator.prod`,
             which does some additional work. Calling this method directly is discouraged.
 
         Returns:
-            :obj:`LazyTensor`
+            :obj:`LinearOperator`
         """
-        from .mul_lazy_tensor import MulLazyTensor
-        from .root_lazy_tensor import RootLazyTensor
+        from .mul_linear_operator import MulLinearOperator
+        from .root_linear_operator import RootLinearOperator
 
         if self.size(dim) == 1:
             return self.squeeze(dim)
@@ -522,10 +522,10 @@ class LazyTensor(ABC):
             if num_batch // 2 == 1:
                 part1 = part1.squeeze(dim)
                 part2 = part2.squeeze(dim)
-                res = MulLazyTensor(RootLazyTensor(part1), RootLazyTensor(part2))
+                res = MulLinearOperator(RootLinearOperator(part1), RootLinearOperator(part2))
                 break
             else:
-                res = MulLazyTensor(RootLazyTensor(part1), RootLazyTensor(part2))
+                res = MulLinearOperator(RootLinearOperator(part1), RootLinearOperator(part2))
                 roots = res.root_decomposition().root.evaluate()
                 num_batch = num_batch // 2
 
@@ -533,15 +533,15 @@ class LazyTensor(ABC):
 
     def _root_decomposition(self):
         """
-        Returns the (usually low-rank) root of a lazy tensor of a PSD matrix.
+        Returns the (usually low-rank) root of a linear operator of a PSD matrix.
 
         ..note::
             This method is used internally by the related function
-            :func:`~LazyTensor.root_decomposition`, which does some additional work.
+            :func:`~LinearOperator.root_decomposition`, which does some additional work.
             Calling this method directly is discouraged.
 
         Returns:
-            (Tensor or LazyTensor): The root of the root decomposition
+            (Tensor or LinearOperator): The root of the root decomposition
         """
         func = RootDecomposition()
         res, _ = func.apply(
@@ -569,17 +569,17 @@ class LazyTensor(ABC):
 
     def _root_inv_decomposition(self, initial_vectors=None):
         """
-        Returns the (usually low-rank) inverse root of a lazy tensor of a PSD matrix.
+        Returns the (usually low-rank) inverse root of a linear operator of a PSD matrix.
 
         ..note::
             This method is used internally by the related function
-            :func:`~LazyTensor.root_inv_decomposition`, which does some additional work.
+            :func:`~LinearOperator.root_inv_decomposition`, which does some additional work.
             Calling this method directly is discouraged.
 
         Returns:
-            (Tensor or LazyTensor): The root of the inverse root decomposition
+            (Tensor or LinearOperator): The root of the inverse root decomposition
         """
-        from .root_lazy_tensor import RootLazyTensor
+        from .root_linear_operator import RootLinearOperator
 
         func = RootDecomposition()
         roots, inv_roots = func.apply(
@@ -596,9 +596,9 @@ class LazyTensor(ABC):
         )
 
         if initial_vectors is not None and initial_vectors.size(-1) > 1:
-            add_to_cache(self, "root_decomposition", RootLazyTensor(roots[0]))
+            add_to_cache(self, "root_decomposition", RootLinearOperator(roots[0]))
         else:
-            add_to_cache(self, "root_decomposition", RootLazyTensor(roots))
+            add_to_cache(self, "root_decomposition", RootLinearOperator(roots))
 
         return inv_roots
 
@@ -614,23 +614,23 @@ class LazyTensor(ABC):
 
     def _sum_batch(self, dim):
         """
-        Sum the LazyTensor across a batch dimension (supplied as a positive number).
+        Sum the LinearOperator across a batch dimension (supplied as a positive number).
 
         ..note::
-            This method is used internally by the related function :func:`~LazyTensor.sum`,
+            This method is used internally by the related function :func:`~LinearOperator.sum`,
             which does some additional work. Calling this method directly is discouraged.
 
         Returns:
-            :obj:`LazyTensor`
+            :obj:`LinearOperator`
         """
-        from .sum_batch_lazy_tensor import SumBatchLazyTensor
+        from .sum_batch_linear_operator import SumBatchLinearOperator
 
-        return SumBatchLazyTensor(self, block_dim=dim)
+        return SumBatchLinearOperator(self, block_dim=dim)
 
     def _t_matmul(self, rhs):
         r"""
         Performs a transpose matrix multiplication :math:`K^{\top}M` with the matrix :math:`K` that this
-        LazyTensor represents.
+        LinearOperator represents.
 
         Args:
             rhs (:obj:`torch.tensor`): the matrix :math:`M` to multiply with.
@@ -647,8 +647,8 @@ class LazyTensor(ABC):
         Args:
             - diag (Scalar Tensor)
         """
-        from .diag_lazy_tensor import ConstantDiagLazyTensor, DiagLazyTensor
-        from .added_diag_lazy_tensor import AddedDiagLazyTensor
+        from .diag_linear_operator import ConstantDiagLinearOperator, DiagLinearOperator
+        from .added_diag_linear_operator import AddedDiagLinearOperator
 
         if not self.is_square:
             raise RuntimeError("add_diag only defined for square matrices")
@@ -656,24 +656,24 @@ class LazyTensor(ABC):
         diag_shape = diag.shape
         if len(diag_shape) == 0 or diag_shape[-1] == 1:
             # interpret scalar tensor or single-trailing element as constant diag
-            diag_tensor = ConstantDiagLazyTensor(diag, diag_shape=self.shape[-1])
+            diag_tensor = ConstantDiagLinearOperator(diag, diag_shape=self.shape[-1])
         else:
             try:
                 expanded_diag = diag.expand(self.shape[:-1])
             except RuntimeError:
                 raise RuntimeError(
-                    "add_diag for LazyTensor of size {} received invalid diagonal of size {}.".format(
+                    "add_diag for LinearOperator of size {} received invalid diagonal of size {}.".format(
                         self.shape, diag_shape
                     )
                 )
-            diag_tensor = DiagLazyTensor(expanded_diag)
+            diag_tensor = DiagLinearOperator(expanded_diag)
 
-        return AddedDiagLazyTensor(self, diag_tensor)
+        return AddedDiagLinearOperator(self, diag_tensor)
 
     def add_jitter(self, jitter_val=1e-3):
         """
         Adds jitter (i.e., a small diagonal component) to the matrix this
-        LazyTensor represents. This could potentially be implemented as a no-op,
+        LinearOperator represents. This could potentially be implemented as a no-op,
         however this could lead to numerical instabilities, so this should only
         be done at the user's risk.
         """
@@ -696,13 +696,13 @@ class LazyTensor(ABC):
 
     def cholesky(self, upper=False):
         """
-        Cholesky-factorizes the LazyTensor
+        Cholesky-factorizes the LinearOperator
 
         Parameters:
             upper (bool) - upper triangular or lower triangular factor (default: False)
 
         Returns:
-            (LazyTensor) Cholesky factor (lower triangular)
+            (LinearOperator) Cholesky factor (lower triangular)
         """
         chol = self._cholesky(upper=False)
         if upper:
@@ -711,7 +711,7 @@ class LazyTensor(ABC):
 
     def clone(self):
         """
-        Clones the LazyTensor (creates clones of all underlying tensors)
+        Clones the LinearOperator (creates clones of all underlying tensors)
         """
         args = [arg.clone() if hasattr(arg, "clone") else arg for arg in self._args]
         kwargs = {key: val.clone() if hasattr(val, "clone") else val for key, val in self._kwargs.items()}
@@ -720,7 +720,7 @@ class LazyTensor(ABC):
     def cpu(self):
         """
         Returns:
-            :obj:`~LazyTensor`: a new LazyTensor identical to ``self``, but on the CPU.
+            :obj:`~LinearOperator`: a new LinearOperator identical to ``self``, but on the CPU.
         """
         new_args = []
         new_kwargs = {}
@@ -744,8 +744,8 @@ class LazyTensor(ABC):
             device_id (:obj:`str`, optional):
                 Device ID of GPU to use.
         Returns:
-            :obj:`~LazyTensor`:
-                a new LazyTensor identical to ``self``, but on the GPU.
+            :obj:`~LinearOperator`:
+                a new LinearOperator identical to ``self``, but on the GPU.
         """
         new_args = []
         new_kwargs = {}
@@ -767,9 +767,9 @@ class LazyTensor(ABC):
 
     def detach(self):
         """
-        Removes the LazyTensor from the current computation graph.
+        Removes the LinearOperator from the current computation graph.
         (In practice, this function removes all Tensors that make up the
-        LazyTensor from the computation graph.)
+        LinearOperator from the computation graph.)
         """
         return self.clone().detach_()
 
@@ -787,11 +787,11 @@ class LazyTensor(ABC):
 
     def diag(self):
         r"""
-        As :func:`torch.diag`, returns the diagonal of the matrix :math:`K` this LazyTensor represents as a vector.
+        As :func:`torch.diag`, returns the diagonal of the matrix :math:`K` this LinearOperator represents as a vector.
 
         :rtype: torch.tensor
         :return: The diagonal of :math:`K`. If :math:`K` is :math:`n \times n`, this will be a length
-            n vector. If this LazyTensor represents a batch (e.g., is :math:`b \times n \times n`), this will be a
+            n vector. If this LinearOperator represents a batch (e.g., is :math:`b \times n \times n`), this will be a
             :math:`b \times n` matrix of diagonals, one for each matrix in the batch.
         """
         if settings.debug.on():
@@ -803,7 +803,7 @@ class LazyTensor(ABC):
 
     def dim(self):
         """
-        Alias of :meth:`~LazyTensor.ndimension`
+        Alias of :meth:`~LinearOperator.ndimension`
         """
         return self.ndimension()
 
@@ -835,7 +835,7 @@ class LazyTensor(ABC):
         if len(sizes) < 2 or tuple(sizes[-2:]) != self.matrix_shape:
             raise RuntimeError(
                 "Invalid expand arguments {}. Currently, repeat only works to create repeated "
-                "batches of a 2D LazyTensor.".format(tuple(sizes))
+                "batches of a 2D LinearOperator.".format(tuple(sizes))
             )
         elif all(isinstance(size, int) for size in sizes):
             shape = torch.Size(sizes)
@@ -848,8 +848,8 @@ class LazyTensor(ABC):
     @cached
     def evaluate(self):
         """
-        Explicitly evaluates the matrix this LazyTensor represents. This function
-        should return a Tensor storing an exact representation of this LazyTensor.
+        Explicitly evaluates the matrix this LinearOperator represents. This function
+        should return a Tensor storing an exact representation of this LinearOperator.
         """
         num_rows, num_cols = self.matrix_shape
 
@@ -865,7 +865,7 @@ class LazyTensor(ABC):
 
     def evaluate_kernel(self):
         """
-        Return a new LazyTensor representing the same one as this one, but with
+        Return a new LinearOperator representing the same one as this one, but with
         all lazily evaluated kernels actually evaluated.
         """
         return self.representation_tree()(*self.representation())
@@ -881,7 +881,7 @@ class LazyTensor(ABC):
                 A^{-1} R,
             \end{equation}
 
-        where :math:`R` is :attr:`right_tensor` and :math:`A` is the LazyTensor.
+        where :math:`R` is :attr:`right_tensor` and :math:`A` is the LinearOperator.
 
         If :attr:`left_tensor` is supplied, computes
 
@@ -903,14 +903,14 @@ class LazyTensor(ABC):
         """
         if not self.is_square:
             raise RuntimeError(
-                "inv_matmul only operates on (batches of) square (positive semi-definite) LazyTensors. "
+                "inv_matmul only operates on (batches of) square (positive semi-definite) LinearOperators. "
                 "Got a {} of size {}.".format(self.__class__.__name__, self.size())
             )
 
         if self.dim() == 2 and right_tensor.dim() == 1:
             if self.shape[-1] != right_tensor.numel():
                 raise RuntimeError(
-                    "LazyTensor (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
+                    "LinearOperator (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
                         self.shape, right_tensor.shape
                     )
                 )
@@ -937,7 +937,7 @@ class LazyTensor(ABC):
         """
         if not self.is_square:
             raise RuntimeError(
-                "inv_quad only operates on (batches of) square (positive semi-definite) LazyTensors. "
+                "inv_quad only operates on (batches of) square (positive semi-definite) LinearOperators. "
                 "Got a {} of size {}.".format(self.__class__.__name__, self.size())
             )
 
@@ -945,7 +945,7 @@ class LazyTensor(ABC):
             result_shape = _matmul_broadcast_shape(self.shape, tensor.shape)
         except RuntimeError:
             raise RuntimeError(
-                "LazyTensor (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
+                "LinearOperator (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
                     self.shape, tensor.shape
                 )
             )
@@ -973,17 +973,17 @@ class LazyTensor(ABC):
         """
         # Special case: use Cholesky to compute these terms
         if settings.fast_computations.log_prob.off() or (self.size(-1) <= settings.max_cholesky_size.value()):
-            from .chol_lazy_tensor import CholLazyTensor
-            from .triangular_lazy_tensor import TriangularLazyTensor
+            from .chol_linear_operator import CholLinearOperator
+            from .triangular_linear_operator import TriangularLinearOperator
 
-            cholesky = CholLazyTensor(TriangularLazyTensor(self.cholesky()))
+            cholesky = CholLinearOperator(TriangularLinearOperator(self.cholesky()))
             return cholesky.inv_quad_logdet(inv_quad_rhs=inv_quad_rhs, logdet=logdet, reduce_inv_quad=reduce_inv_quad)
 
         # Default: use modified batch conjugate gradients to compute these terms
         # See NeurIPS 2018 paper: https://arxiv.org/abs/1809.11165
         if not self.is_square:
             raise RuntimeError(
-                "inv_quad_logdet only operates on (batches of) square (positive semi-definite) LazyTensors. "
+                "inv_quad_logdet only operates on (batches of) square (positive semi-definite) LinearOperators. "
                 "Got a {} of size {}.".format(self.__class__.__name__, self.size())
             )
 
@@ -991,18 +991,18 @@ class LazyTensor(ABC):
             if self.dim() == 2 and inv_quad_rhs.dim() == 1:
                 if self.shape[-1] != inv_quad_rhs.numel():
                     raise RuntimeError(
-                        "LazyTensor (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
+                        "LinearOperator (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
                             self.shape, inv_quad_rhs.shape
                         )
                     )
             elif self.dim() != inv_quad_rhs.dim():
                 raise RuntimeError(
-                    "LazyTensor (size={}) and right-hand-side Tensor (size={}) should have the same number "
+                    "LinearOperator (size={}) and right-hand-side Tensor (size={}) should have the same number "
                     "of dimensions.".format(self.shape, inv_quad_rhs.shape)
                 )
             elif self.batch_shape != inv_quad_rhs.shape[:-2] or self.shape[-1] != inv_quad_rhs.shape[-2]:
                 raise RuntimeError(
-                    "LazyTensor (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
+                    "LinearOperator (size={}) cannot be multiplied with right-hand-side Tensor (size={}).".format(
                         self.shape, inv_quad_rhs.shape
                     )
                 )
@@ -1055,20 +1055,20 @@ class LazyTensor(ABC):
 
         Args:
             other (:obj:`torch.tensor`): Matrix or vector to multiply with. Can be either a :obj:`torch.tensor`
-                or a :obj:`LazyTensor`.
+                or a :obj:`LinearOperator`.
 
         Returns:
-            :obj:`torch.tensor`: Tensor or LazyTensor containing the result of the matrix multiplication :math:`KM`,
-            where :math:`K` is the (batched) matrix that this :obj:`LazyTensor` represents, and :math:`M`
+            :obj:`torch.tensor`: Tensor or LinearOperator containing the result of the matrix multiplication :math:`KM`,
+            where :math:`K` is the (batched) matrix that this :obj:`LinearOperator` represents, and :math:`M`
             is the (batched) matrix input to this method.
         """
-        # TODO: Move this check to MatmulLazyTensor and Matmul (so we can pass the shapes through from there)
+        # TODO: Move this check to MatmulLinearOperator and Matmul (so we can pass the shapes through from there)
         _matmul_broadcast_shape(self.shape, other.shape)
 
-        if isinstance(other, LazyTensor):
-            from .matmul_lazy_tensor import MatmulLazyTensor
+        if isinstance(other, LinearOperator):
+            from .matmul_linear_operator import MatmulLinearOperator
 
-            return MatmulLazyTensor(self, other)
+            return MatmulLinearOperator(self, other)
 
         func = Matmul()
         return func.apply(self.representation_tree(), other, *self.representation())
@@ -1085,29 +1085,29 @@ class LazyTensor(ABC):
         Multiplies the matrix by a constant, or elementwise the matrix by another matrix
 
         Args:
-            other (:obj:`torch.tensor` or :obj:`~LazyTensor`): constant or matrix to elementwise
+            other (:obj:`torch.tensor` or :obj:`~LinearOperator`): constant or matrix to elementwise
             multiply by.
 
         Returns:
-            :obj:`LazyTensor`: Another lazy tensor representing the result of the multiplication. if
+            :obj:`LinearOperator`: Another linear operator representing the result of the multiplication. if
             other was a constant (or batch of constants), this will likely be a
-            :obj:`ConstantMulLazyTensor`. If other was
-            another matrix, this will likely be a :obj:`MulLazyTensor`.
+            :obj:`ConstantMulLinearOperator`. If other was
+            another matrix, this will likely be a :obj:`MulLinearOperator`.
         """
-        from .zero_lazy_tensor import ZeroLazyTensor
-        from .non_lazy_tensor import lazify
+        from .zero_linear_operator import ZeroLinearOperator
+        from .non_linear_operator import to_linear_operator
 
-        if isinstance(other, ZeroLazyTensor):
+        if isinstance(other, ZeroLinearOperator):
             return other
 
-        if not (torch.is_tensor(other) or isinstance(other, LazyTensor)):
+        if not (torch.is_tensor(other) or isinstance(other, LinearOperator)):
             other = torch.tensor(other, dtype=self.dtype, device=self.device)
 
         try:
             _mul_broadcast_shape(self.shape, other.shape)
         except RuntimeError:
             raise RuntimeError(
-                "Cannot multiply LazyTensor of size {} by an object of size {}".format(self.shape, other.shape)
+                "Cannot multiply LinearOperator of size {} by an object of size {}".format(self.shape, other.shape)
             )
 
         if torch.is_tensor(other):
@@ -1116,7 +1116,7 @@ class LazyTensor(ABC):
             elif other.shape[-2:] == torch.Size((1, 1)):
                 return self._mul_constant(other.view(*other.shape[:-2]))
 
-        return self._mul_matrix(lazify(other))
+        return self._mul_matrix(to_linear_operator(other))
 
     def ndimension(self):
         """
@@ -1155,49 +1155,49 @@ class LazyTensor(ABC):
                     )
 
         if dims[-2:] != (num_dims - 2, num_dims - 1):
-            raise ValueError("At the moment, cannot permute the non-batch dimensions of LazyTensors.")
+            raise ValueError("At the moment, cannot permute the non-batch dimensions of LinearOperators.")
 
         return self._permute_batch(*dims[:-2])
 
     def prod(self, dim=None):
         """
-        For a `b x n x m` LazyTensor, compute the product over the batch dimension.
+        For a `b x n x m` LinearOperator, compute the product over the batch dimension.
 
         The `mul_batch_size` controls whether or not the batch dimension is grouped when multiplying.
-            * `mul_batch_size=None` (default): The entire batch dimension is multiplied. Returns a `n x n` LazyTensor.
+            * `mul_batch_size=None` (default): The entire batch dimension is multiplied. Returns a `n x n` LinearOperator.
             * `mul_batch_size=k`: Creates `b/k` groups, and muls the `k` entries of this group.
-                (The LazyTensor is reshaped as a `b/k x k x n x m` LazyTensor and the `k` dimension is multiplied over.
-                Returns a `b/k x n x m` LazyTensor.
+                (The LinearOperator is reshaped as a `b/k x k x n x m` LinearOperator and the `k` dimension is multiplied over.
+                Returns a `b/k x n x m` LinearOperator.
 
         Args:
             :attr:`mul_batch_size` (int or None):
                 Controls the number of groups that are multiplied over (default: None).
 
         Returns:
-            :obj:`~LazyTensor`
+            :obj:`~LinearOperator`
 
         Example:
-            >>> lazy_tensor = NonLazyTensor(torch.tensor([
+            >>> linear_operator = NonLinearOperator(torch.tensor([
                     [[2, 4], [1, 2]],
                     [[1, 1], [0, -1]],
                     [[2, 1], [1, 0]],
                     [[3, 2], [2, -1]],
                 ]))
-            >>> lazy_tensor.mul_batch().evaluate()
+            >>> linear_operator.mul_batch().evaluate()
             >>> # Returns: torch.Tensor([[12, 8], [0, 0]])
-            >>> lazy_tensor.mul_batch(mul_batch_size=2)
+            >>> linear_operator.mul_batch(mul_batch_size=2)
             >>> # Returns: torch.Tensor([[[2, 4], [0, -2]], [[6, 2], [2, 0]]])
         """
         if dim is None:
-            raise ValueError("At the moment, LazyTensor.prod requires a dim argument (got None)")
+            raise ValueError("At the moment, LinearOperator.prod requires a dim argument (got None)")
 
         orig_dim = dim
         if dim < 0:
             dim = self.dim() + dim
         if dim >= len(self.batch_shape):
             raise ValueError(
-                "At the moment, LazyTensor.prod only works on batch dimensions. "
-                "Got dim={} for LazyTensor of shape {}".format(orig_dim, self.shape)
+                "At the moment, LinearOperator.prod only works on batch dimensions. "
+                "Got dim={} for LinearOperator of shape {}".format(orig_dim, self.shape)
             )
 
         return self._prod_batch(dim)
@@ -1206,12 +1206,12 @@ class LazyTensor(ABC):
         """
         Repeats this tensor along the specified dimensions.
 
-        Currently, this only works to create repeated batches of a 2D LazyTensor.
-        I.e. all calls should be `lazy_tensor.repeat(<size>, 1, 1)`.
+        Currently, this only works to create repeated batches of a 2D LinearOperator.
+        I.e. all calls should be `linear_operator.repeat(<size>, 1, 1)`.
 
         Example:
-            >>> lazy_tensor = ToeplitzLazyTensor(torch.tensor([4. 1., 0.5]))
-            >>> lazy_tensor.repeat(2, 1, 1).evaluate()
+            >>> linear_operator = ToeplitzLinearOperator(torch.tensor([4. 1., 0.5]))
+            >>> linear_operator.repeat(2, 1, 1).evaluate()
             tensor([[[4.0000, 1.0000, 0.5000],
                      [1.0000, 4.0000, 1.0000],
                      [0.5000, 1.0000, 4.0000]],
@@ -1219,38 +1219,38 @@ class LazyTensor(ABC):
                      [1.0000, 4.0000, 1.0000],
                      [0.5000, 1.0000, 4.0000]]])
         """
-        from .batch_repeat_lazy_tensor import BatchRepeatLazyTensor
+        from .batch_repeat_linear_operator import BatchRepeatLinearOperator
 
         if len(sizes) < 3 or tuple(sizes[-2:]) != (1, 1):
             raise RuntimeError(
                 "Invalid repeat arguments {}. Currently, repeat only works to create repeated "
-                "batches of a 2D LazyTensor.".format(tuple(sizes))
+                "batches of a 2D LinearOperator.".format(tuple(sizes))
             )
 
-        return BatchRepeatLazyTensor(self, batch_repeat=torch.Size(sizes[:-2]))
+        return BatchRepeatLinearOperator(self, batch_repeat=torch.Size(sizes[:-2]))
 
     def representation(self):
         """
-        Returns the Tensors that are used to define the LazyTensor
+        Returns the Tensors that are used to define the LinearOperator
         """
         representation = []
         for arg in self._args:
             if torch.is_tensor(arg):
                 representation.append(arg)
-            elif hasattr(arg, "representation") and callable(arg.representation):  # Is it a LazyTensor?
+            elif hasattr(arg, "representation") and callable(arg.representation):  # Is it a LinearOperator?
                 representation += list(arg.representation())
             else:
-                raise RuntimeError("Representation of a LazyTensor should consist only of Tensors")
+                raise RuntimeError("Representation of a LinearOperator should consist only of Tensors")
         return tuple(representation)
 
     def representation_tree(self):
         """
-        Returns a :obj:`LazyTensorRepresentationTree` tree object that recursively encodes the
-        representation of this lazy tensor. In particular, if the definition of this lazy tensor depends on other
-        lazy tensors, the tree is an object that can be used to reconstruct the full structure of this lazy tensor,
+        Returns a :obj:`LinearOperatorRepresentationTree` tree object that recursively encodes the
+        representation of this linear operator. In particular, if the definition of this linear operator depends on other
+        linear operators, the tree is an object that can be used to reconstruct the full structure of this linear operator,
         including all subobjects. This is used internally.
         """
-        return LazyTensorRepresentationTree(self)
+        return LinearOperatorRepresentationTree(self)
 
     @property
     def requires_grad(self):
@@ -1272,7 +1272,7 @@ class LazyTensor(ABC):
 
     def requires_grad_(self, val):
         """
-        Sets `requires_grad=val` on all the Tensors that make up the LazyTensor
+        Sets `requires_grad=val` on all the Tensors that make up the LinearOperator
         This is an inplace operation.
         """
         self.requires_grad = val
@@ -1281,16 +1281,16 @@ class LazyTensor(ABC):
     @cached(name="root_decomposition")
     def root_decomposition(self, method: Optional[str] = None):
         """
-        Returns a (usually low-rank) root decomposition lazy tensor of a PSD matrix.
+        Returns a (usually low-rank) root decomposition linear operator of a PSD matrix.
         This can be used for sampling from a Gaussian distribution, or for obtaining a
         low-rank version of a matrix
         """
-        from .chol_lazy_tensor import CholLazyTensor
-        from .root_lazy_tensor import RootLazyTensor
+        from .chol_linear_operator import CholLinearOperator
+        from .root_linear_operator import RootLinearOperator
 
         if not self.is_square:
             raise RuntimeError(
-                "root_decomposition only operates on (batches of) square (symmetric) LazyTensors. "
+                "root_decomposition only operates on (batches of) square (symmetric) LinearOperators. "
                 "Got a {} of size {}.".format(self.__class__.__name__, self.size())
             )
 
@@ -1306,7 +1306,7 @@ class LazyTensor(ABC):
         if method == "cholesky":
             try:
                 res = self.cholesky()
-                return CholLazyTensor(res)
+                return CholLinearOperator(res)
             except RuntimeError as e:
                 warnings.warn(
                     f"Runtime Error when computing Cholesky decomposition: {e}. Using RootDecomposition.".format(e),
@@ -1315,50 +1315,50 @@ class LazyTensor(ABC):
                 method = "symeig"
 
         if method == "pivoted_cholesky":
-            return RootLazyTensor(pivoted_cholesky(self.evaluate(), max_iter=self._root_decomposition_size()))
+            return RootLinearOperator(pivoted_cholesky(self.evaluate(), max_iter=self._root_decomposition_size()))
 
         if method == "symeig":
             evals, evecs = self.symeig(eigenvectors=True)
             # TODO: only use non-zero evals (req. dealing w/ batches...)
             F = evecs * evals.clamp(0.0).sqrt().unsqueeze(-2)
-            return RootLazyTensor(F)
+            return RootLinearOperator(F)
 
         if method == "svd":
             U, S, _ = self.svd()
             # TODO: only use non-zero singular values (req. dealing w/ batches...)
             F = U * S.sqrt().unsqueeze(-2)
-            return RootLazyTensor(F)
+            return RootLinearOperator(F)
 
         if method == "lanczos":
-            return RootLazyTensor(self._root_decomposition())
+            return RootLinearOperator(self._root_decomposition())
 
         raise RuntimeError(f"Unknown method '{method}'")
 
     @cached(name="root_inv_decomposition")
     def root_inv_decomposition(self, initial_vectors=None, test_vectors=None):
         """
-        Returns a (usually low-rank) root decomposotion lazy tensor of a PSD matrix.
+        Returns a (usually low-rank) root decomposotion linear operator of a PSD matrix.
         This can be used for sampling from a Gaussian distribution, or for obtaining a
         low-rank version of a matrix
         """
-        from .root_lazy_tensor import RootLazyTensor
-        from .non_lazy_tensor import lazify
+        from .root_linear_operator import RootLinearOperator
+        from .non_linear_operator import to_linear_operator
 
         if self.shape[-2:].numel() == 1:
-            return RootLazyTensor(1 / self.evaluate().sqrt())
+            return RootLinearOperator(1 / self.evaluate().sqrt())
 
         if (
             self.size(-1) <= settings.max_cholesky_size.value()
             or settings.fast_computations.covar_root_decomposition.off()
         ):
             try:
-                L = delazify(self.cholesky())
+                L = to_dense(self.cholesky())
                 # we know L is triangular, so inverting is a simple triangular solve agaist the identity
                 # we don't need the batch shape here, thanks to broadcasting
                 Eye = torch.eye(L.shape[-2], device=L.device, dtype=L.dtype)
                 Linv = torch.triangular_solve(Eye, L, upper=False)[0]
-                res = lazify(Linv.transpose(-1, -2))
-                return RootLazyTensor(res)
+                res = to_linear_operator(Linv.transpose(-1, -2))
+                return RootLinearOperator(res)
             except RuntimeError as e:
                 warnings.warn(
                     "Runtime Error when computing Cholesky decomposition: {}. Using RootDecomposition.".format(e),
@@ -1367,7 +1367,7 @@ class LazyTensor(ABC):
 
         if not self.is_square:
             raise RuntimeError(
-                "root_inv_decomposition only operates on (batches of) square (symmetric) LazyTensors. "
+                "root_inv_decomposition only operates on (batches of) square (symmetric) LinearOperators. "
                 "Got a {} of size {}.".format(self.__class__.__name__, self.size())
             )
 
@@ -1375,18 +1375,18 @@ class LazyTensor(ABC):
             if self.dim() == 2 and initial_vectors.dim() == 1:
                 if self.shape[-1] != initial_vectors.numel():
                     raise RuntimeError(
-                        "LazyTensor (size={}) cannot be multiplied with initial_vectors (size={}).".format(
+                        "LinearOperator (size={}) cannot be multiplied with initial_vectors (size={}).".format(
                             self.shape, initial_vectors.shape
                         )
                     )
             elif self.dim() != initial_vectors.dim():
                 raise RuntimeError(
-                    "LazyTensor (size={}) and initial_vectors (size={}) should have the same number "
+                    "LinearOperator (size={}) and initial_vectors (size={}) should have the same number "
                     "of dimensions.".format(self.shape, initial_vectors.shape)
                 )
             elif self.batch_shape != initial_vectors.shape[:-2] or self.shape[-1] != initial_vectors.shape[-2]:
                 raise RuntimeError(
-                    "LazyTensor (size={}) cannot be multiplied with initial_vectors (size={}).".format(
+                    "LinearOperator (size={}) cannot be multiplied with initial_vectors (size={}).".format(
                         self.shape, initial_vectors.shape
                     )
                 )
@@ -1423,11 +1423,11 @@ class LazyTensor(ABC):
         else:
             inv_root = inv_roots
 
-        return RootLazyTensor(inv_root)
+        return RootLinearOperator(inv_root)
 
     def size(self, val=None):
         """
-        Returns the size of the resulting Tensor that the lazy tensor represents
+        Returns the size of the resulting Tensor that the linear operator represents
         """
         size = self._size()
         if val is not None:
@@ -1469,7 +1469,7 @@ class LazyTensor(ABC):
 
     def sum(self, dim=None):
         """
-        Sum the LazyTensor across a dimension.
+        Sum the LinearOperator across a dimension.
         The `dim` controls which batch dimension is summed over.
         If set to None, then sums all dimensions
 
@@ -1478,16 +1478,16 @@ class LazyTensor(ABC):
                 Which dimension is being summed over (default=None)
 
         Returns:
-            :obj:`~LazyTensor` or Tensor.
+            :obj:`~LinearOperator` or Tensor.
 
         Example:
-            >>> lazy_tensor = NonLazyTensor(torch.tensor([
+            >>> linear_operator = NonLinearOperator(torch.tensor([
                     [[2, 4], [1, 2]],
                     [[1, 1], [0, -1]],
                     [[2, 1], [1, 0]],
                     [[3, 2], [2, -1]],
                 ]))
-            >>> lazy_tensor.sum(0).evaluate()
+            >>> linear_operator.sum(0).evaluate()
         """
         # Case: summing everything
         if dim is None:
@@ -1511,28 +1511,28 @@ class LazyTensor(ABC):
         elif dim < self.dim():
             return self._sum_batch(dim)
         else:
-            raise ValueError("Invalid dim ({}) for LazyTensor of size {}".format(orig_dim, self.shape))
+            raise ValueError("Invalid dim ({}) for LinearOperator of size {}".format(orig_dim, self.shape))
 
-    def svd(self) -> Tuple["LazyTensor", Tensor, "LazyTensor"]:
+    def svd(self) -> Tuple["LinearOperator", Tensor, "LinearOperator"]:
         """
-        Compute the SVD of the lazy tensor `M` s.t. `M = U @ S @ V.T`.
+        Compute the SVD of the linear operator `M` s.t. `M = U @ S @ V.T`.
         This can be very slow for large tensors. Should be special-cased for tensors with particular structure.
         Does NOT sort the sigular values.
 
         Returns:
-            :obj:`~LazyTensor`:
+            :obj:`~LinearOperator`:
                 The left singular vectors (`U`).
             :obj:`torch.Tensor`:
                 The singular values (`S`).
-            :obj:`~LazyTensor`:
+            :obj:`~LinearOperator`:
                 The right singular vectors (`V`).
         """
         return self._svd()
 
     @cached(name="symeig")
-    def symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional["LazyTensor"]]:
+    def symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional["LinearOperator"]]:
         """
-        Compute the symmetric eigendecomposition of the lazy tensor. This can be very
+        Compute the symmetric eigendecomposition of the linear operator. This can be very
         slow for large tensors. Should be special-cased for tensors with particular
         structure. Does NOT sort the eigenvalues.
 
@@ -1541,8 +1541,8 @@ class LazyTensor(ABC):
         Returns:
             :obj:`torch.Tensor`:
                 The eigenvalues.
-            :obj:`~LazyTensor`:
-                The eigenvectors. If `eigenvectors=False`, this is None. Otherwise, this LazyTensor
+            :obj:`~LinearOperator`:
+                The eigenvectors. If `eigenvectors=False`, this is None. Otherwise, this LinearOperator
                 contains the orthonormal eigenvectors of the matrix.
         """
         try:
@@ -1554,12 +1554,12 @@ class LazyTensor(ABC):
 
     def to(self, device_id):
         """
-        A device-agnostic method of moving the lazy_tensor to the specified device.
+        A device-agnostic method of moving the linear_operator to the specified device.
 
         Args:
             device_id (:obj: `torch.device`): Which device to use (GPU or CPU).
         Returns:
-            :obj:`~LazyTensor`: New LazyTensor identical to self on specified device
+            :obj:`~LinearOperator`: New LinearOperator identical to self on specified device
         """
         new_args = []
         new_kwargs = {}
@@ -1577,7 +1577,7 @@ class LazyTensor(ABC):
 
     def t(self):
         """
-        Alias of :meth:`~LazyTensor.transpose` for 2D LazyTensor.
+        Alias of :meth:`~LinearOperator.transpose` for 2D LinearOperator.
         (Tranposes the two dimensions.)
         """
         if self.ndimension() != 2:
@@ -1586,11 +1586,11 @@ class LazyTensor(ABC):
 
     def transpose(self, dim1, dim2):
         """
-        Transpose the dimensions `dim1` and `dim2` of the LazyTensor.
+        Transpose the dimensions `dim1` and `dim2` of the LinearOperator.
 
         Example:
-            >>> lazy_tensor = NonLazyTensor(torch.randn(3, 5))
-            >>> lazy_tensor.transpose(0, 1)
+            >>> linear_operator = NonLinearOperator(torch.randn(3, 5))
+            >>> linear_operator.transpose(0, 1)
         """
         ndimension = self.ndimension()
         if dim1 < 0:
@@ -1677,61 +1677,61 @@ class LazyTensor(ABC):
 
     def __add__(self, other):
         """
-        Return a :obj:`LazyTensor` that represents the sum of this lazy tensor and another matrix
-        or lazy tensor.
+        Return a :obj:`LinearOperator` that represents the sum of this linear operator and another matrix
+        or linear operator.
 
         Args:
-            :attr:`other` (:obj:`torch.tensor` or :obj:`LazyTensor`):
+            :attr:`other` (:obj:`torch.tensor` or :obj:`LinearOperator`):
                 Matrix to add to this one.
 
         Returns:
-            :obj:`SumLazyTensor`:
-                A sum lazy tensor representing the sum of this lazy tensor and other.
+            :obj:`SumLinearOperator`:
+                A sum linear operator representing the sum of this linear operator and other.
         """
-        from .sum_lazy_tensor import SumLazyTensor
-        from .zero_lazy_tensor import ZeroLazyTensor
-        from .diag_lazy_tensor import DiagLazyTensor
-        from .added_diag_lazy_tensor import AddedDiagLazyTensor
-        from .non_lazy_tensor import lazify
+        from .sum_linear_operator import SumLinearOperator
+        from .zero_linear_operator import ZeroLinearOperator
+        from .diag_linear_operator import DiagLinearOperator
+        from .added_diag_linear_operator import AddedDiagLinearOperator
+        from .non_linear_operator import to_linear_operator
         from torch import Tensor
 
-        if isinstance(other, ZeroLazyTensor):
+        if isinstance(other, ZeroLinearOperator):
             return self
-        elif isinstance(other, DiagLazyTensor):
-            return AddedDiagLazyTensor(self, other)
+        elif isinstance(other, DiagLinearOperator):
+            return AddedDiagLinearOperator(self, other)
         elif isinstance(other, Tensor):
-            other = lazify(other)
+            other = to_linear_operator(other)
             shape = _mul_broadcast_shape(self.shape, other.shape)
             new_self = self if self.shape[:-2] == shape[:-2] else self._expand_batch(shape[:-2])
             new_other = other if other.shape[:-2] == shape[:-2] else other._expand_batch(shape[:-2])
-            return SumLazyTensor(new_self, new_other)
+            return SumLinearOperator(new_self, new_other)
         else:
-            return SumLazyTensor(self, other)
+            return SumLinearOperator(self, other)
 
     def __div__(self, other):
         """
-        Return a :obj:`LazyTensor` that represents the product of this lazy tensor and
-        the elementwise reciprocal of another matrix or lazy tensor.
+        Return a :obj:`LinearOperator` that represents the product of this linear operator and
+        the elementwise reciprocal of another matrix or linear operator.
 
         Args:
-            :attr:`other` (:obj:`torch.tensor` or :obj:`LazyTensor`):
+            :attr:`other` (:obj:`torch.tensor` or :obj:`LinearOperator`):
                 Matrix to divide this one by.
 
         Returns:
-            :obj:`MulLazyTensor`:
+            :obj:`MulLinearOperator`:
                 Result of division.
         """
-        from .zero_lazy_tensor import ZeroLazyTensor
+        from .zero_linear_operator import ZeroLinearOperator
 
-        if isinstance(other, ZeroLazyTensor):
-            raise RuntimeError("Attempted to divide by a ZeroLazyTensor (divison by zero)")
+        if isinstance(other, ZeroLinearOperator):
+            raise RuntimeError("Attempted to divide by a ZeroLinearOperator (divison by zero)")
 
         return self.mul(1.0 / other)
 
     def __getitem__(self, index):
         """
-        Supports subindexing of the matrix this LazyTensor represents. This may return either another
-        :obj:`LazyTensor` or a :obj:`torch.tensor` depending on the exact implementation.
+        Supports subindexing of the matrix this LinearOperator represents. This may return either another
+        :obj:`LinearOperator` or a :obj:`torch.tensor` depending on the exact implementation.
         """
         ndimension = self.ndimension()
 
@@ -1746,7 +1746,7 @@ class LazyTensor(ABC):
         if settings.debug.on():
             if len(ellipsis_locs) > 1:
                 raise RuntimeError(
-                    "Cannot have multiple ellipsis in a __getitem__ call. LazyTensor {} "
+                    "Cannot have multiple ellipsis in a __getitem__ call. LinearOperator {} "
                     " received index {}.".format(self, index)
                 )
         if len(ellipsis_locs) == 1:
@@ -1797,7 +1797,7 @@ class LazyTensor(ABC):
         # If we selected a single row and/or column (or did tensor indexing), we'll be retuning a tensor
         # with the appropriate shape
         if squeeze_row or squeeze_col or row_col_are_absorbed:
-            res = delazify(res)
+            res = to_dense(res)
         if squeeze_row:
             res = res.squeeze(-2)
         if squeeze_col:
@@ -1808,18 +1808,18 @@ class LazyTensor(ABC):
             expected_shape = _compute_getitem_size(self, index)
             if expected_shape != res.shape:
                 raise RuntimeError(
-                    "{}.__getitem__ failed! Expected a final shape of size {}, got {}. This is a bug with GPyTorch, "
-                    "or your custom LazyTensor.".format(self.__class__.__name__, expected_shape, res.shape)
+                    "{}.__getitem__ failed! Expected a final shape of size {}, got {}. This is a bug with linear_operator, "
+                    "or your custom LinearOperator.".format(self.__class__.__name__, expected_shape, res.shape)
                 )
 
         # We're done!
         return res
 
     @cached(name="svd")
-    def _svd(self) -> Tuple["LazyTensor", Tensor, "LazyTensor"]:
+    def _svd(self) -> Tuple["LinearOperator", Tensor, "LinearOperator"]:
         """Method that allows implementing special-cased SVD computation. Should not be called directly"""
-        # Using symeig is preferable here for psd LazyTensors.
-        # Will need to overwrite this function for non-psd LazyTensors.
+        # Using symeig is preferable here for psd LinearOperators.
+        # Will need to overwrite this function for non-psd LinearOperators.
         evals, evecs = self.symeig(eigenvectors=True)
         signs = torch.sign(evals)
         U = evecs * signs.unsqueeze(-2)
@@ -1827,9 +1827,9 @@ class LazyTensor(ABC):
         V = evecs
         return U, S, V
 
-    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional["LazyTensor"]]:
+    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional["LinearOperator"]]:
         """Method that allows implementing special-cased symeig computation. Should not be called directly"""
-        from non_lazy_tensor import NonLazyTensor
+        from .non_linear_operator import NonLinearOperator
 
         dtype = self.dtype  # perform decomposition in double precision for numerical stability
         # TODO: Use fp64 registry once #1213 is addressed
@@ -1837,7 +1837,7 @@ class LazyTensor(ABC):
         # chop any negative eigenvalues. TODO: warn if evals are significantly negative
         evals = evals.clamp_min(0.0).to(dtype=dtype)
         if eigenvectors:
-            evecs = NonLazyTensor(evecs.to(dtype=dtype))
+            evecs = NonLinearOperator(evecs.to(dtype=dtype))
         else:
             evecs = None
         return evals, evecs
@@ -1866,22 +1866,22 @@ def _import_dotted_name(name):
     return obj
 
 
-def delazify(obj):
+def to_dense(obj):
     """
     A function which ensures that `obj` is a (normal) Tensor.
 
     If `obj` is a Tensor, this function does nothing.
-    If `obj` is a LazyTensor, this function evaluates it.
+    If `obj` is a LinearOperator, this function evaluates it.
     """
 
     if torch.is_tensor(obj):
         return obj
-    elif isinstance(obj, LazyTensor):
+    elif isinstance(obj, LinearOperator):
         return obj.evaluate()
     else:
         raise TypeError("object of class {} cannot be made into a Tensor".format(obj.__class__.__name__))
 
 
-_deprecate_renamed_methods(LazyTensor, inv_quad_log_det="inv_quad_logdet", log_det="logdet")
+_deprecate_renamed_methods(LinearOperator, inv_quad_log_det="inv_quad_logdet", log_det="logdet")
 
-__all__ = ["LazyTensor", "delazify"]
+__all__ = ["LinearOperator", "to_dense"]

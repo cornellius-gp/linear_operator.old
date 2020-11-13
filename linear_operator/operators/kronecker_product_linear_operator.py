@@ -10,14 +10,14 @@ from torch import Tensor
 from .. import settings
 from ..utils.broadcasting import _matmul_broadcast_shape, _mul_broadcast_shape
 from ..utils.memoize import cached
-from .diag_lazy_tensor import ConstantDiagLazyTensor, DiagLazyTensor
-from .lazy_tensor import LazyTensor
-from .non_lazy_tensor import lazify
-from .triangular_lazy_tensor import TriangularLazyTensor
+from .diag_linear_operator import ConstantDiagLinearOperator, DiagLinearOperator
+from .linear_operator import LinearOperator
+from .non_linear_operator import to_linear_operator
+from .triangular_linear_operator import TriangularLinearOperator
 
 
 def _kron_diag(*lts) -> Tensor:
-    """Compute diagonal of a KroneckerProductLazyTensor from the diagonals of the constituiting tensors"""
+    """Compute diagonal of a KroneckerProductLinearOperator from the diagonals of the constituiting tensors"""
     lead_diag = lts[0].diag()
     if len(lts) == 1:  # base case:
         return lead_diag
@@ -30,69 +30,69 @@ def _prod(iterable):
     return reduce(operator.mul, iterable, 1)
 
 
-def _matmul(lazy_tensors, kp_shape, rhs):
+def _matmul(linear_operators, kp_shape, rhs):
     output_shape = _matmul_broadcast_shape(kp_shape, rhs.shape)
     output_batch_shape = output_shape[:-2]
 
     res = rhs.contiguous().expand(*output_batch_shape, *rhs.shape[-2:])
     num_cols = rhs.size(-1)
-    for lazy_tensor in lazy_tensors:
-        res = res.view(*output_batch_shape, lazy_tensor.size(-1), -1)
-        factor = lazy_tensor._matmul(res)
-        factor = factor.view(*output_batch_shape, lazy_tensor.size(-2), -1, num_cols).transpose(-3, -2)
+    for linear_operator in linear_operators:
+        res = res.view(*output_batch_shape, linear_operator.size(-1), -1)
+        factor = linear_operator._matmul(res)
+        factor = factor.view(*output_batch_shape, linear_operator.size(-2), -1, num_cols).transpose(-3, -2)
         res = factor.reshape(*output_batch_shape, -1, num_cols)
     return res
 
 
-def _t_matmul(lazy_tensors, kp_shape, rhs):
+def _t_matmul(linear_operators, kp_shape, rhs):
     kp_t_shape = (*kp_shape[:-2], kp_shape[-1], kp_shape[-2])
     output_shape = _matmul_broadcast_shape(kp_t_shape, rhs.shape)
     output_batch_shape = torch.Size(output_shape[:-2])
 
     res = rhs.contiguous().expand(*output_batch_shape, *rhs.shape[-2:])
     num_cols = rhs.size(-1)
-    for lazy_tensor in lazy_tensors:
-        res = res.view(*output_batch_shape, lazy_tensor.size(-2), -1)
-        factor = lazy_tensor._t_matmul(res)
-        factor = factor.view(*output_batch_shape, lazy_tensor.size(-1), -1, num_cols).transpose(-3, -2)
+    for linear_operator in linear_operators:
+        res = res.view(*output_batch_shape, linear_operator.size(-2), -1)
+        factor = linear_operator._t_matmul(res)
+        factor = factor.view(*output_batch_shape, linear_operator.size(-1), -1, num_cols).transpose(-3, -2)
         res = factor.reshape(*output_batch_shape, -1, num_cols)
     return res
 
 
-class KroneckerProductLazyTensor(LazyTensor):
+class KroneckerProductLinearOperator(LinearOperator):
     r"""
-    Returns the Kronecker product of the given lazy tensors
+    Returns the Kronecker product of the given linear operators
 
     Args:
-        :`lazy_tensors`: List of lazy tensors
+        :`linear_operators`: List of linear operators
     """
 
-    def __init__(self, *lazy_tensors):
+    def __init__(self, *linear_operators):
         try:
-            lazy_tensors = tuple(lazify(lazy_tensor) for lazy_tensor in lazy_tensors)
+            linear_operators = tuple(to_linear_operator(linear_operator) for linear_operator in linear_operators)
         except TypeError:
-            raise RuntimeError("KroneckerProductLazyTensor is intended to wrap lazy tensors.")
-        for prev_lazy_tensor, curr_lazy_tensor in zip(lazy_tensors[:-1], lazy_tensors[1:]):
-            if prev_lazy_tensor.batch_shape != curr_lazy_tensor.batch_shape:
+            raise RuntimeError("KroneckerProductLinearOperator is intended to wrap linear operators.")
+        for prev_linear_operator, curr_linear_operator in zip(linear_operators[:-1], linear_operators[1:]):
+            if prev_linear_operator.batch_shape != curr_linear_operator.batch_shape:
                 raise RuntimeError(
-                    "KroneckerProductLazyTensor expects lazy tensors with the "
-                    "same batch shapes. Got {}.".format([lv.batch_shape for lv in lazy_tensors])
+                    "KroneckerProductLinearOperator expects linear operators with the "
+                    "same batch shapes. Got {}.".format([lv.batch_shape for lv in linear_operators])
                 )
-        super().__init__(*lazy_tensors)
-        self.lazy_tensors = lazy_tensors
+        super().__init__(*linear_operators)
+        self.linear_operators = linear_operators
 
     def __add__(self, other):
-        if isinstance(other, DiagLazyTensor):
+        if isinstance(other, DiagLinearOperator):
             return self.add_diag(other.diag())
         else:
             return super().__add__(other)
 
     def add_diag(self, diag):
         r"""
-        Adds a diagonal to a KroneckerProductLazyTensor
+        Adds a diagonal to a KroneckerProductLinearOperator
         """
 
-        from .kronecker_product_added_diag_lazy_tensor import KroneckerProductAddedDiagLazyTensor
+        from .kronecker_product_added_diag_linear_operator import KroneckerProductAddedDiagLinearOperator
 
         if not self.is_square:
             raise RuntimeError("add_diag only defined for square matrices")
@@ -100,39 +100,39 @@ class KroneckerProductLazyTensor(LazyTensor):
         diag_shape = diag.shape
         if len(diag_shape) == 0 or diag_shape[-1] == 1:
             # interpret scalar tensor or single-trailing element as constant diag
-            diag_tensor = ConstantDiagLazyTensor(diag, diag_shape=self.shape[-1])
+            diag_tensor = ConstantDiagLinearOperator(diag, diag_shape=self.shape[-1])
         else:
             try:
                 expanded_diag = diag.expand(self.shape[:-1])
             except RuntimeError:
                 raise RuntimeError(
-                    "add_diag for LazyTensor of size {} received invalid diagonal of size {}.".format(
+                    "add_diag for LinearOperator of size {} received invalid diagonal of size {}.".format(
                         self.shape, diag_shape
                     )
                 )
-            diag_tensor = DiagLazyTensor(expanded_diag)
+            diag_tensor = DiagLinearOperator(expanded_diag)
 
-        return KroneckerProductAddedDiagLazyTensor(self, diag_tensor)
+        return KroneckerProductAddedDiagLinearOperator(self, diag_tensor)
 
     def diag(self):
         r"""
-        As :func:`torch.diag`, returns the diagonal of the matrix :math:`K` this LazyTensor represents as a vector.
+        As :func:`torch.diag`, returns the diagonal of the matrix :math:`K` this LinearOperator represents as a vector.
 
         :rtype: torch.tensor
         :return: The diagonal of :math:`K`. If :math:`K` is :math:`n \times n`, this will be a length
-            n vector. If this LazyTensor represents a batch (e.g., is :math:`b \times n \times n`), this will be a
+            n vector. If this LinearOperator represents a batch (e.g., is :math:`b \times n \times n`), this will be a
             :math:`b \times n` matrix of diagonals, one for each matrix in the batch.
         """
         if settings.debug.on():
             if not self.is_square:
                 raise RuntimeError("Diag works on square matrices (or batches)")
-        return _kron_diag(*self.lazy_tensors)
+        return _kron_diag(*self.linear_operators)
 
     @cached
     def inverse(self):
         # here we use that (A \kron B)^-1 = A^-1 \kron B^-1
         # TODO: Investigate under what conditions computing individual individual inverses makes sense
-        inverses = [lt.inverse() for lt in self.lazy_tensors]
+        inverses = [lt.inverse() for lt in self.linear_operators]
         return self.__class__(*inverses)
 
     def inv_matmul(self, right_tensor, left_tensor=None):
@@ -142,24 +142,24 @@ class KroneckerProductLazyTensor(LazyTensor):
 
     @cached(name="cholesky")
     def _cholesky(self, upper=False):
-        chol_factors = [lt.cholesky(upper=upper) for lt in self.lazy_tensors]
-        return KroneckerProductTriangularLazyTensor(*chol_factors, upper=upper)
+        chol_factors = [lt.cholesky(upper=upper) for lt in self.linear_operators]
+        return KroneckerProductTriangularLinearOperator(*chol_factors, upper=upper)
 
     def _expand_batch(self, batch_shape):
-        return self.__class__(*[lazy_tensor._expand_batch(batch_shape) for lazy_tensor in self.lazy_tensors])
+        return self.__class__(*[linear_operator._expand_batch(batch_shape) for linear_operator in self.linear_operators])
 
     def _get_indices(self, row_index, col_index, *batch_indices):
         row_factor = self.size(-2)
         col_factor = self.size(-1)
 
         res = None
-        for lazy_tensor in self.lazy_tensors:
-            sub_row_size = lazy_tensor.size(-2)
-            sub_col_size = lazy_tensor.size(-1)
+        for linear_operator in self.linear_operators:
+            sub_row_size = linear_operator.size(-2)
+            sub_col_size = linear_operator.size(-1)
 
             row_factor //= sub_row_size
             col_factor //= sub_col_size
-            sub_res = lazy_tensor._get_indices(
+            sub_res = linear_operator._get_indices(
                 (row_index // row_factor).fmod(sub_row_size),
                 (col_index // col_factor).fmod(sub_col_size),
                 *batch_indices,
@@ -170,13 +170,13 @@ class KroneckerProductLazyTensor(LazyTensor):
 
     def _inv_matmul(self, right_tensor, left_tensor=None):
         # Computes inv_matmul by exploiting the identity (A \kron B)^-1 = A^-1 \kron B^-1
-        tsr_shapes = [q.size(-1) for q in self.lazy_tensors]
+        tsr_shapes = [q.size(-1) for q in self.linear_operators]
         n_rows = right_tensor.size(-2)
         batch_shape = _mul_broadcast_shape(self.shape[:-2], right_tensor.shape[:-2])
         perm_batch = tuple(range(len(batch_shape)))
         y = right_tensor.clone().expand(*batch_shape, *right_tensor.shape[-2:])
-        for n, q in zip(tsr_shapes, self.lazy_tensors):
-            # for KroneckerProductTriangularLazyTensor this inv_matmul is very cheap
+        for n, q in zip(tsr_shapes, self.linear_operators):
+            # for KroneckerProductTriangularLinearOperator this inv_matmul is very cheap
             y = q.inv_matmul(y.reshape(*batch_shape, n, -1))
             y = y.reshape(*batch_shape, n, n_rows // n, -1).permute(*perm_batch, -2, -3, -1)
         res = y.reshape(*batch_shape, n_rows, -1)
@@ -189,7 +189,7 @@ class KroneckerProductLazyTensor(LazyTensor):
         if is_vec:
             rhs = rhs.unsqueeze(-1)
 
-        res = _matmul(self.lazy_tensors, self.shape, rhs.contiguous())
+        res = _matmul(self.linear_operators, self.shape, rhs.contiguous())
 
         if is_vec:
             res = res.squeeze(-1)
@@ -197,32 +197,32 @@ class KroneckerProductLazyTensor(LazyTensor):
 
     @cached(name="size")
     def _size(self):
-        left_size = _prod(lazy_tensor.size(-2) for lazy_tensor in self.lazy_tensors)
-        right_size = _prod(lazy_tensor.size(-1) for lazy_tensor in self.lazy_tensors)
-        return torch.Size((*self.lazy_tensors[0].batch_shape, left_size, right_size))
+        left_size = _prod(linear_operator.size(-2) for linear_operator in self.linear_operators)
+        right_size = _prod(linear_operator.size(-1) for linear_operator in self.linear_operators)
+        return torch.Size((*self.linear_operators[0].batch_shape, left_size, right_size))
 
     @cached(name="svd")
-    def _svd(self) -> Tuple[LazyTensor, Tensor, LazyTensor]:
+    def _svd(self) -> Tuple[LinearOperator, Tensor, LinearOperator]:
         U, S, V = [], [], []
-        for lt in self.lazy_tensors:
+        for lt in self.linear_operators:
             U_, S_, V_ = lt.svd()
             U.append(U_)
             S.append(S_)
             V.append(V_)
-        S = KroneckerProductLazyTensor(*[DiagLazyTensor(S_) for S_ in S]).diag()
-        U = KroneckerProductLazyTensor(*U)
-        V = KroneckerProductLazyTensor(*V)
+        S = KroneckerProductLinearOperator(*[DiagLinearOperator(S_) for S_ in S]).diag()
+        U = KroneckerProductLinearOperator(*U)
+        V = KroneckerProductLinearOperator(*V)
         return U, S, V
 
-    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LazyTensor]]:
+    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LinearOperator]]:
         evals, evecs = [], []
-        for lt in self.lazy_tensors:
+        for lt in self.linear_operators:
             evals_, evecs_ = lt.symeig(eigenvectors=eigenvectors)
             evals.append(evals_)
             evecs.append(evecs_)
-        evals = KroneckerProductLazyTensor(*[DiagLazyTensor(evals_) for evals_ in evals]).diag()
+        evals = KroneckerProductLinearOperator(*[DiagLinearOperator(evals_) for evals_ in evals]).diag()
         if eigenvectors:
-            evecs = KroneckerProductLazyTensor(*evecs)
+            evecs = KroneckerProductLinearOperator(*evecs)
         else:
             evecs = None
         return evals, evecs
@@ -232,27 +232,27 @@ class KroneckerProductLazyTensor(LazyTensor):
         if is_vec:
             rhs = rhs.unsqueeze(-1)
 
-        res = _t_matmul(self.lazy_tensors, self.shape, rhs.contiguous())
+        res = _t_matmul(self.linear_operators, self.shape, rhs.contiguous())
 
         if is_vec:
             res = res.squeeze(-1)
         return res
 
     def _transpose_nonbatch(self):
-        return self.__class__(*(lazy_tensor._transpose_nonbatch() for lazy_tensor in self.lazy_tensors), **self._kwargs)
+        return self.__class__(*(linear_operator._transpose_nonbatch() for linear_operator in self.linear_operators), **self._kwargs)
 
 
-class KroneckerProductTriangularLazyTensor(KroneckerProductLazyTensor):
-    def __init__(self, *lazy_tensors, upper=False):
-        if not all(isinstance(lt, TriangularLazyTensor) for lt in lazy_tensors):
-            raise RuntimeError("Components of KroneckerProductTriangularLazyTensor must be TriangularLazyTensor.")
-        super().__init__(*lazy_tensors)
+class KroneckerProductTriangularLinearOperator(KroneckerProductLinearOperator):
+    def __init__(self, *linear_operators, upper=False):
+        if not all(isinstance(lt, TriangularLinearOperator) for lt in linear_operators):
+            raise RuntimeError("Components of KroneckerProductTriangularLinearOperator must be TriangularLinearOperator.")
+        super().__init__(*linear_operators)
         self.upper = upper
 
     @cached
     def inverse(self):
         # here we use that (A \kron B)^-1 = A^-1 \kron B^-1
-        inverses = [lt.inverse() for lt in self.lazy_tensors]
+        inverses = [lt.inverse() for lt in self.linear_operators]
         return self.__class__(*inverses, upper=self.upper)
 
     def inv_matmul(self, right_tensor, left_tensor=None):
@@ -261,7 +261,7 @@ class KroneckerProductTriangularLazyTensor(KroneckerProductLazyTensor):
 
     @cached(name="cholesky")
     def _cholesky(self, upper=False):
-        raise NotImplementedError("_cholesky not applicable to triangular lazy tensors")
+        raise NotImplementedError("_cholesky not applicable to triangular linear operators")
 
     def _cholesky_solve(self, rhs, upper=False):
         if upper:
@@ -274,5 +274,5 @@ class KroneckerProductTriangularLazyTensor(KroneckerProductLazyTensor):
             res = self._transpose_nonbatch().inv_matmul(w)
         return res
 
-    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LazyTensor]]:
-        raise NotImplementedError("_symeig not applicable to triangular lazy tensors")
+    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LinearOperator]]:
+        raise NotImplementedError("_symeig not applicable to triangular linear operators")

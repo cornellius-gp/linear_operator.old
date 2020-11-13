@@ -3,89 +3,89 @@ from torch import Tensor
 
 from ..utils.broadcasting import _mul_broadcast_shape
 from ..utils.memoize import cached
-from .lazy_tensor import LazyTensor
-from .non_lazy_tensor import lazify
-from .zero_lazy_tensor import ZeroLazyTensor
+from .linear_operator import LinearOperator
+from .non_linear_operator import to_linear_operator
+from .zero_linear_operator import ZeroLinearOperator
 
-# from .broadcasted_lazy_tensor import BroadcastedLazyTensor
+# from .broadcasted_linear_operator import BroadcastedLinearOperator
 
 
-class SumLazyTensor(LazyTensor):
-    def __init__(self, *lazy_tensors, **kwargs):
+class SumLinearOperator(LinearOperator):
+    def __init__(self, *linear_operators, **kwargs):
         try:
-            lazy_tensors = tuple(lazify(lt) for lt in lazy_tensors)
+            linear_operators = tuple(to_linear_operator(lt) for lt in linear_operators)
         except TypeError:
-            raise TypeError("All arguments of a SumLazyTensor should be LazyTensors or Tensors")
-        batch_shape = _mul_broadcast_shape(*[lt.batch_shape for lt in lazy_tensors])
-        lazy_tensors = tuple(
-            lt._expand_batch(batch_shape) if lt.batch_shape != batch_shape else lt for lt in lazy_tensors
+            raise TypeError("All arguments of a SumLinearOperator should be LinearOperators or Tensors")
+        batch_shape = _mul_broadcast_shape(*[lt.batch_shape for lt in linear_operators])
+        linear_operators = tuple(
+            lt._expand_batch(batch_shape) if lt.batch_shape != batch_shape else lt for lt in linear_operators
         )
-        super(SumLazyTensor, self).__init__(*lazy_tensors, **kwargs)
+        super(SumLinearOperator, self).__init__(*linear_operators, **kwargs)
 
-        self.lazy_tensors = lazy_tensors
+        self.linear_operators = linear_operators
 
     def _expand_batch(self, batch_shape):
-        expanded_tensors = [lazy_tensor._expand_batch(batch_shape) for lazy_tensor in self.lazy_tensors]
+        expanded_tensors = [linear_operator._expand_batch(batch_shape) for linear_operator in self.linear_operators]
         return self.__class__(*expanded_tensors)
 
     def _get_indices(self, row_index, col_index, *batch_indices):
-        results = [lazy_tensor._get_indices(row_index, col_index, *batch_indices) for lazy_tensor in self.lazy_tensors]
+        results = [linear_operator._get_indices(row_index, col_index, *batch_indices) for linear_operator in self.linear_operators]
         return sum(results)
 
     def _getitem(self, row_index, col_index, *batch_indices):
-        results = [lazy_tensor._getitem(row_index, col_index, *batch_indices) for lazy_tensor in self.lazy_tensors]
-        return SumLazyTensor(*results)
+        results = [linear_operator._getitem(row_index, col_index, *batch_indices) for linear_operator in self.linear_operators]
+        return SumLinearOperator(*results)
 
     def _matmul(self, rhs):
-        return sum(lazy_tensor._matmul(rhs) for lazy_tensor in self.lazy_tensors)
+        return sum(linear_operator._matmul(rhs) for linear_operator in self.linear_operators)
 
     def _quad_form_derivative(self, left_vecs, right_vecs):
         return tuple(
-            var for lazy_tensor in self.lazy_tensors for var in lazy_tensor._quad_form_derivative(left_vecs, right_vecs)
+            var for linear_operator in self.linear_operators for var in linear_operator._quad_form_derivative(left_vecs, right_vecs)
         )
 
     def _size(self):
-        return _mul_broadcast_shape(*[lt.shape for lt in self.lazy_tensors])
+        return _mul_broadcast_shape(*[lt.shape for lt in self.linear_operators])
 
     def _sum_batch(self, dim):
-        return self.__class__(*(lazy_tensor._sum_batch(dim) for lazy_tensor in self.lazy_tensors))
+        return self.__class__(*(linear_operator._sum_batch(dim) for linear_operator in self.linear_operators))
 
     def _t_matmul(self, rhs):
-        return sum(lazy_tensor._t_matmul(rhs) for lazy_tensor in self.lazy_tensors)
+        return sum(linear_operator._t_matmul(rhs) for linear_operator in self.linear_operators)
 
     def _transpose_nonbatch(self):
-        lazy_tensors_t = [lazy_tensor.transpose(-1, -2) for lazy_tensor in self.lazy_tensors]
-        return self.__class__(*lazy_tensors_t)
+        linear_operators_t = [linear_operator.transpose(-1, -2) for linear_operator in self.linear_operators]
+        return self.__class__(*linear_operators_t)
 
     @cached
     def evaluate(self):
-        return sum(lazy_tensor.evaluate() for lazy_tensor in self.lazy_tensors)
+        return sum(linear_operator.evaluate() for linear_operator in self.linear_operators)
 
     def __add__(self, other):
-        from .diag_lazy_tensor import DiagLazyTensor
-        from .added_diag_lazy_tensor import AddedDiagLazyTensor
+        from .diag_linear_operator import DiagLinearOperator
+        from .added_diag_linear_operator import AddedDiagLinearOperator
 
-        if isinstance(other, ZeroLazyTensor):
+        if isinstance(other, ZeroLinearOperator):
             return self
-        elif isinstance(other, DiagLazyTensor):
-            return AddedDiagLazyTensor(self, other)
-        elif isinstance(other, SumLazyTensor):
-            return SumLazyTensor(*(list(self.lazy_tensors) + list(other.lazy_tensors)))
-        elif isinstance(other, LazyTensor):
-            return SumLazyTensor(*(list(self.lazy_tensors) + [other]))
+        elif isinstance(other, DiagLinearOperator):
+            return AddedDiagLinearOperator(self, other)
+        elif isinstance(other, SumLinearOperator):
+            return SumLinearOperator(*(list(self.linear_operators) + list(other.linear_operators)))
+        elif isinstance(other, LinearOperator):
+            return SumLinearOperator(*(list(self.linear_operators) + [other]))
         elif isinstance(other, Tensor):
             # get broadcast shape, assuming mul broadcasting the same as add broadcasting
             broadcasted_shape = _mul_broadcast_shape(self.shape, other.shape)
 
-            # lazify + broadcast other
-            broadcasted_other = lazify(other.expand(broadcasted_shape))
+            # to_linear_operator + broadcast other
+            broadcasted_other = to_linear_operator(other.expand(broadcasted_shape))
 
-            # update the lazy tensors' shape as well
+            # update the linear operators' shape as well
             new_self = self if broadcasted_shape == self.shape else self._expand_batch(broadcasted_shape[:-2])
 
-            return SumLazyTensor(*(list(new_self.lazy_tensors) + [broadcasted_other]))
+            return SumLinearOperator(*(list(new_self.linear_operators) + [broadcasted_other]))
         else:
-            raise AttributeError("other must be a LazyTensor")
+            raise AttributeError("other must be a LinearOperator")
 
     def diag(self):
-        return sum(lazy_tensor.diag().contiguous() for lazy_tensor in self.lazy_tensors)
+        return sum(linear_operator.diag().contiguous() for linear_operator in self.linear_operators)

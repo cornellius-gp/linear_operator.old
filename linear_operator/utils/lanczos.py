@@ -23,7 +23,7 @@ def lanczos_tridiag(
 
     if not callable(matmul_closure):
         raise RuntimeError(
-            "matmul_closure should be a function callable object that multiples a (Lazy)Tensor "
+            "matmul_closure should be a function callable object that multiples a LinearOperator "
             "by a vector. Got a {} instead.".format(matmul_closure.__class__.__name__)
         )
 

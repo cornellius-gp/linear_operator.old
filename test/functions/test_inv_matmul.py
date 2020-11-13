@@ -4,9 +4,9 @@ import unittest
 
 import torch
 
-from gpytorch import settings
-from gpytorch.lazy import NonLazyTensor
-from gpytorch.test.base_test_case import BaseTestCase
+from linear_operator import settings
+from linear_operator.operators import NonLinearOperator
+from linear_operator.test.base_test_case import BaseTestCase
 
 
 def _ensure_symmetric_grad(grad):
@@ -36,7 +36,7 @@ class TestInvMatmulNonBatch(BaseTestCase, unittest.TestCase):
 
         # Forward
         with settings.terminate_cg_by_size(False):
-            res = NonLazyTensor(mat).inv_matmul(vec)
+            res = NonLinearOperator(mat).inv_matmul(vec)
             actual = mat_copy.inverse().matmul(vec_copy)
             self.assertAllClose(res, actual)
 
@@ -56,7 +56,7 @@ class TestInvMatmulNonBatch(BaseTestCase, unittest.TestCase):
 
         # Forward
         with settings.terminate_cg_by_size(False):
-            res = NonLazyTensor(mat).inv_matmul(vecs)
+            res = NonLinearOperator(mat).inv_matmul(vecs)
             actual = mat_copy.inverse().matmul(vecs_copy)
             self.assertAllClose(res, actual)
 

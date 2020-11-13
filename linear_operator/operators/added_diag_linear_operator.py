@@ -10,37 +10,37 @@ from .. import settings
 from ..utils import broadcasting, pivoted_cholesky
 from ..utils.memoize import cached
 from ..utils.warnings import NumericalWarning
-from .diag_lazy_tensor import ConstantDiagLazyTensor, DiagLazyTensor
-from .lazy_tensor import LazyTensor
-from .psd_sum_lazy_tensor import PsdSumLazyTensor
-from .root_lazy_tensor import RootLazyTensor
-from .sum_lazy_tensor import SumLazyTensor
+from .diag_linear_operator import ConstantDiagLinearOperator, DiagLinearOperator
+from .linear_operator import LinearOperator
+from .psd_sum_linear_operator import PsdSumLinearOperator
+from .root_linear_operator import RootLinearOperator
+from .sum_linear_operator import SumLinearOperator
 
 
-class AddedDiagLazyTensor(SumLazyTensor):
+class AddedDiagLinearOperator(SumLinearOperator):
     """
-    A SumLazyTensor, but of only two lazy tensors, the second of which must be
-    a DiagLazyTensor.
+    A SumLinearOperator, but of only two linear operators, the second of which must be
+    a DiagLinearOperator.
     """
 
-    def __init__(self, *lazy_tensors, preconditioner_override=None):
-        lazy_tensors = list(lazy_tensors)
-        super(AddedDiagLazyTensor, self).__init__(*lazy_tensors, preconditioner_override=preconditioner_override)
-        if len(lazy_tensors) > 2:
-            raise RuntimeError("An AddedDiagLazyTensor can only have two components")
+    def __init__(self, *linear_operators, preconditioner_override=None):
+        linear_operators = list(linear_operators)
+        super(AddedDiagLinearOperator, self).__init__(*linear_operators, preconditioner_override=preconditioner_override)
+        if len(linear_operators) > 2:
+            raise RuntimeError("An AddedDiagLinearOperator can only have two components")
 
-        broadcasting._mul_broadcast_shape(lazy_tensors[0].shape, lazy_tensors[1].shape)
+        broadcasting._mul_broadcast_shape(linear_operators[0].shape, linear_operators[1].shape)
 
-        if isinstance(lazy_tensors[0], DiagLazyTensor) and isinstance(lazy_tensors[1], DiagLazyTensor):
-            raise RuntimeError("Trying to lazily add two DiagLazyTensors. Create a single DiagLazyTensor instead.")
-        elif isinstance(lazy_tensors[0], DiagLazyTensor):
-            self._diag_tensor = lazy_tensors[0]
-            self._lazy_tensor = lazy_tensors[1]
-        elif isinstance(lazy_tensors[1], DiagLazyTensor):
-            self._diag_tensor = lazy_tensors[1]
-            self._lazy_tensor = lazy_tensors[0]
+        if isinstance(linear_operators[0], DiagLinearOperator) and isinstance(linear_operators[1], DiagLinearOperator):
+            raise RuntimeError("Trying to lazily add two DiagLinearOperators. Create a single DiagLinearOperator instead.")
+        elif isinstance(linear_operators[0], DiagLinearOperator):
+            self._diag_tensor = linear_operators[0]
+            self._linear_operator = linear_operators[1]
+        elif isinstance(linear_operators[1], DiagLinearOperator):
+            self._diag_tensor = linear_operators[1]
+            self._linear_operator = linear_operators[0]
         else:
-            raise RuntimeError("One of the LazyTensors input to AddedDiagLazyTensor must be a DiagLazyTensor!")
+            raise RuntimeError("One of the LinearOperators input to AddedDiagLinearOperator must be a DiagLinearOperator!")
 
         self.preconditioner_override = preconditioner_override
 
@@ -54,18 +54,18 @@ class AddedDiagLazyTensor(SumLazyTensor):
         self._r_cache = None
 
     def _matmul(self, rhs):
-        return torch.addcmul(self._lazy_tensor._matmul(rhs), self._diag_tensor._diag.unsqueeze(-1), rhs)
+        return torch.addcmul(self._linear_operator._matmul(rhs), self._diag_tensor._diag.unsqueeze(-1), rhs)
 
     def add_diag(self, added_diag):
-        return AddedDiagLazyTensor(self._lazy_tensor, self._diag_tensor.add_diag(added_diag))
+        return AddedDiagLinearOperator(self._linear_operator, self._diag_tensor.add_diag(added_diag))
 
     def __add__(self, other):
-        from .diag_lazy_tensor import DiagLazyTensor
+        from .diag_linear_operator import DiagLinearOperator
 
-        if isinstance(other, DiagLazyTensor):
-            return AddedDiagLazyTensor(self._lazy_tensor, self._diag_tensor + other)
+        if isinstance(other, DiagLinearOperator):
+            return AddedDiagLinearOperator(self._linear_operator, self._diag_tensor + other)
         else:
-            return AddedDiagLazyTensor(self._lazy_tensor + other, self._diag_tensor)
+            return AddedDiagLinearOperator(self._linear_operator + other, self._diag_tensor)
 
     def _preconditioner(self):
         r"""
@@ -80,7 +80,7 @@ class AddedDiagLazyTensor(SumLazyTensor):
 
         This function returns:
         - A function `precondition_closure` that computes the solve (L L^T + D)^{-1} x
-        - A LazyTensor `precondition_lt` that represents (L L^T + D)
+        - A LinearOperator `precondition_lt` that represents (L L^T + D)
         - The log determinant of (L L^T + D)
         """
 
@@ -97,7 +97,7 @@ class AddedDiagLazyTensor(SumLazyTensor):
         # Through matrix determinant lemma, log |L L^T + D| reduces down to 2 log |R|
         if self._q_cache is None:
             max_iter = settings.max_preconditioner_size.value()
-            self._piv_chol_self = pivoted_cholesky.pivoted_cholesky(self._lazy_tensor, max_iter)
+            self._piv_chol_self = pivoted_cholesky.pivoted_cholesky(self._linear_operator, max_iter)
             if torch.any(torch.isnan(self._piv_chol_self)).item():
                 warnings.warn(
                     "NaNs encountered in preconditioner computation. Attempting to continue without preconditioning.",
@@ -131,7 +131,7 @@ class AddedDiagLazyTensor(SumLazyTensor):
         else:
             self._init_cache_for_non_constant_diag(eye, batch_shape, n)
 
-        self._precond_lt = PsdSumLazyTensor(RootLazyTensor(self._piv_chol_self), self._diag_tensor)
+        self._precond_lt = PsdSumLinearOperator(RootLinearOperator(self._piv_chol_self), self._diag_tensor)
 
     def _init_cache_for_constant_diag(self, eye, batch_shape, n, k):
         # We can factor out the noise for for both QR and solves.
@@ -155,16 +155,16 @@ class AddedDiagLazyTensor(SumLazyTensor):
         self._precond_logdet_cache = logdet.view(*batch_shape) if len(batch_shape) else logdet.squeeze()
 
     @cached(name="svd")
-    def _svd(self) -> Tuple["LazyTensor", Tensor, "LazyTensor"]:
-        if isinstance(self._diag_tensor, ConstantDiagLazyTensor):
-            U, S_, V = self._lazy_tensor.svd()
+    def _svd(self) -> Tuple["LinearOperator", Tensor, "LinearOperator"]:
+        if isinstance(self._diag_tensor, ConstantDiagLinearOperator):
+            U, S_, V = self._linear_operator.svd()
             S = S_ + self._diag_tensor.diag()
             return U, S, V
         return super()._svd()
 
-    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LazyTensor]]:
-        if isinstance(self._diag_tensor, ConstantDiagLazyTensor):
-            evals_, evecs = self._lazy_tensor.symeig(eigenvectors=eigenvectors)
+    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LinearOperator]]:
+        if isinstance(self._diag_tensor, ConstantDiagLinearOperator):
+            evals_, evecs = self._linear_operator.symeig(eigenvectors=eigenvectors)
             evals = evals_ + self._diag_tensor.diag()
             return evals, evecs
         return super()._symeig(eigenvectors=eigenvectors)

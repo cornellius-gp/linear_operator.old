@@ -2,26 +2,26 @@
 
 import torch
 
-from .lazy_tensor import LazyTensor
+from .linear_operator import LinearOperator
 
 
-class NonLazyTensor(LazyTensor):
+class NonLinearOperator(LinearOperator):
     def _check_args(self, tsr):
         if not torch.is_tensor(tsr):
-            return "NonLazyTensor must take a torch.Tensor; got {}".format(tsr.__class__.__name__)
+            return "NonLinearOperator must take a torch.Tensor; got {}".format(tsr.__class__.__name__)
         if tsr.dim() < 2:
-            return "NonLazyTensor expects a matrix (or batches of matrices) - got a Tensor of size {}.".format(
+            return "NonLinearOperator expects a matrix (or batches of matrices) - got a Tensor of size {}.".format(
                 tsr.shape
             )
 
     def __init__(self, tsr):
         """
-        Not a lazy tensor
+        Not a linear operator
 
         Args:
         - tsr (Tensor: matrix) a Tensor
         """
-        super(NonLazyTensor, self).__init__(tsr)
+        super(NonLinearOperator, self).__init__(tsr)
         self.tensor = tsr
 
     def _cholesky_solve(self, rhs, upper=False):
@@ -57,7 +57,7 @@ class NonLazyTensor(LazyTensor):
         return self.__class__(self.tensor.sum(dim))
 
     def _transpose_nonbatch(self):
-        return NonLazyTensor(self.tensor.transpose(-1, -2))
+        return NonLinearOperator(self.tensor.transpose(-1, -2))
 
     def _t_matmul(self, rhs):
         return torch.matmul(self.tensor.transpose(-1, -2), rhs)
@@ -73,34 +73,34 @@ class NonLazyTensor(LazyTensor):
         return self.tensor
 
     def __add__(self, other):
-        if isinstance(other, NonLazyTensor):
-            return NonLazyTensor(self.tensor + other.tensor)
+        if isinstance(other, NonLinearOperator):
+            return NonLinearOperator(self.tensor + other.tensor)
         elif isinstance(other, torch.Tensor):
-            return NonLazyTensor(self.tensor + other)
+            return NonLinearOperator(self.tensor + other)
         else:
-            return super(NonLazyTensor, self).__add__(other)
+            return super(NonLinearOperator, self).__add__(other)
 
     def mul(self, other):
-        if isinstance(other, NonLazyTensor):
-            return NonLazyTensor(self.tensor * other.tensor)
+        if isinstance(other, NonLinearOperator):
+            return NonLinearOperator(self.tensor * other.tensor)
         else:
-            return super(NonLazyTensor, self).mul(other)
+            return super(NonLinearOperator, self).mul(other)
 
 
-def lazify(obj):
+def to_linear_operator(obj):
     """
-    A function which ensures that `obj` is a LazyTensor.
+    A function which ensures that `obj` is a LinearOperator.
 
-    If `obj` is a LazyTensor, this function does nothing.
-    If `obj` is a (normal) Tensor, this function wraps it with a `NonLazyTensor`.
+    If `obj` is a LinearOperator, this function does nothing.
+    If `obj` is a (normal) Tensor, this function wraps it with a `NonLinearOperator`.
     """
 
     if torch.is_tensor(obj):
-        return NonLazyTensor(obj)
-    elif isinstance(obj, LazyTensor):
+        return NonLinearOperator(obj)
+    elif isinstance(obj, LinearOperator):
         return obj
     else:
-        raise TypeError("object of class {} cannot be made into a LazyTensor".format(obj.__class__.__name__))
+        raise TypeError("object of class {} cannot be made into a LinearOperator".format(obj.__class__.__name__))
 
 
-__all__ = ["NonLazyTensor", "lazify"]
+__all__ = ["NonLinearOperator", "to_linear_operator"]

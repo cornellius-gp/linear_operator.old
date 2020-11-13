@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import torch
 
-import gpytorch
-from gpytorch.lazy import RootLazyTensor
-from gpytorch.test.base_test_case import BaseTestCase
+from linear_operator import settings, utils
+from linear_operator.operators import RootLinearOperator
+from linear_operator.test.base_test_case import BaseTestCase
 
 
 class TestInvQuadLogDetNonBatch(BaseTestCase, unittest.TestCase):
@@ -40,19 +40,19 @@ class TestInvQuadLogDetNonBatch(BaseTestCase, unittest.TestCase):
             else:
                 actual_logdet = logdets.squeeze()
 
-        # Compute values with LazyTensor
-        _wrapped_cg = MagicMock(wraps=gpytorch.utils.linear_cg)
-        with gpytorch.settings.num_trace_samples(2000), gpytorch.settings.max_cholesky_size(
+        # Compute values with LinearOperator
+        _wrapped_cg = MagicMock(wraps=utils.linear_cg)
+        with settings.num_trace_samples(2000), settings.max_cholesky_size(
             0
-        ), gpytorch.settings.cg_tolerance(1e-5), gpytorch.settings.skip_logdet_forward(improper_logdet), patch(
-            "gpytorch.utils.linear_cg", new=_wrapped_cg
+        ), settings.cg_tolerance(1e-5), settings.skip_logdet_forward(improper_logdet), patch(
+            "linear_operator.utils.linear_cg", new=_wrapped_cg
         ) as linear_cg_mock:
-            lazy_tensor = RootLazyTensor(mat)
+            linear_operator = RootLinearOperator(mat)
 
             if add_diag:
-                lazy_tensor = lazy_tensor.add_jitter(1.0)
+                linear_operator = linear_operator.add_jitter(1.0)
 
-            res_inv_quad, res_logdet = lazy_tensor.inv_quad_logdet(inv_quad_rhs=inv_quad_rhs, logdet=logdet)
+            res_inv_quad, res_logdet = linear_operator.inv_quad_logdet(inv_quad_rhs=inv_quad_rhs, logdet=logdet)
 
         # Compare forward pass
         if inv_quad_rhs is not None:

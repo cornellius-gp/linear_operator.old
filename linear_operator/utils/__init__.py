@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from . import broadcasting, cholesky, fft, grid, interpolation, lanczos, pivoted_cholesky, quadrature, sparse, warnings
+from . import broadcasting, cholesky, fft, grid, interpolation, lanczos, pivoted_cholesky, sparse, warnings
 from .contour_integral_quad import contour_integral_quad
 from .linear_cg import linear_cg
 from .memoize import cached
@@ -34,7 +34,6 @@ __all__ = [
     "minres",
     "pivoted_cholesky",
     "prod",
-    "quadrature",
     "sparse",
     "warnings",
 ]

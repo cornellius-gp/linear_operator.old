@@ -210,7 +210,7 @@ class fast_computations(object):
             covariance matrices :math:`K` are decomposed using the Cholesky decomposition.
 
     * :attr:`log_prob`
-        This feature flag controls how GPyTorch computes the marginal log likelihood for exact GPs
+        This feature flag controls how linear_operator computes the marginal log likelihood for exact GPs
         and `log_prob` for multivariate normal distributions
 
         * If set to True,
@@ -223,7 +223,7 @@ class fast_computations(object):
             `log_prob` is computed using the Cholesky decomposition.
 
     * :attr:`fast_solves`
-        This feature flag controls how GPyTorch computes the solves of positive-definite matrices.
+        This feature flag controls how linear_operator computes the solves of positive-definite matrices.
 
         * If set to True,
             Solves are computed with preconditioned conjugate gradients.
@@ -332,8 +332,8 @@ class _use_eval_tolerance(_feature_flag):
 
 class max_cholesky_size(_value_context):
     """
-    If the size of of a LazyTensor is less than `max_cholesky_size`,
-    then `root_decomposition` and `inv_matmul` of LazyTensor will use Cholesky rather than Lanczos/CG.
+    If the size of of a LinearOperator is less than `max_cholesky_size`,
+    then `root_decomposition` and `inv_matmul` of LinearOperator will use Cholesky rather than Lanczos/CG.
     Default: 800
     """
 
@@ -384,7 +384,7 @@ class memory_efficient(_feature_flag):
 
 class min_preconditioning_size(_value_context):
     """
-    If the size of of a LazyTensor is less than `min_preconditioning_size`,
+    If the size of of a LinearOperator is less than `min_preconditioning_size`,
     then we won't use pivoted Cholesky based preconditioning.
 
     Default: 2000
@@ -438,21 +438,20 @@ class skip_logdet_forward(_feature_flag):
     .. warning:
 
         ADVANCED FEATURE. Use this feature ONLY IF you're using
-        `gpytorch.mlls.MarginalLogLikelihood` as loss functions for optimizing
-        hyperparameters/variational parameters.  DO NOT use this feature if you
-        need accurate estimates of the MLL (i.e. for model selection, MCMC,
+        `LinearOperator#inv_quad_logdet` as loss functions.
+        DO NOT use this feature if you
+        need accurate estimates of the logdet (i.e. for model selection, MCMC,
         second order optimizaiton methods, etc.)
 
     This feature does not affect the gradients returned by
-    :meth:`gpytorch.distributions.MultivariateNormal.log_prob`
-    (used by `gpytorch.mlls.MarginalLogLikelihood`).
+    :meth:`LinearOperator#inv_quad_logdet`.
     The gradients remain unbiased estimates, and therefore can be used with SGD.
     However, the actual likelihood value returned by the forward
     pass will skip certain computations (i.e. the logdet computation), and will therefore
     be improper estimates.
 
     If you're using SGD (or a varient) to optimize parameters, you probably
-    don't need an accurate MLL estimate; you only need accurate gradients. So
+    don't need an accurate log_det estimate; you only need accurate gradients. So
     this setting may give your model a performance boost.
     """
 

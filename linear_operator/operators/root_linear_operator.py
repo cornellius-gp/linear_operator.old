@@ -5,14 +5,14 @@ import torch
 from ..utils.broadcasting import _pad_with_singletons
 from ..utils.getitem import _equal_indices, _noop_index
 from ..utils.memoize import cached
-from .lazy_tensor import LazyTensor
-from .matmul_lazy_tensor import MatmulLazyTensor
-from .non_lazy_tensor import NonLazyTensor, lazify
+from .linear_operator import LinearOperator
+from .matmul_linear_operator import MatmulLinearOperator
+from .non_linear_operator import NonLinearOperator, to_linear_operator
 
 
-class RootLazyTensor(LazyTensor):
+class RootLinearOperator(LinearOperator):
     def __init__(self, root):
-        root = lazify(root)
+        root = to_linear_operator(root)
         super().__init__(root)
         self.root = root
 
@@ -41,14 +41,14 @@ class RootLazyTensor(LazyTensor):
         if torch.is_tensor(row_index) and torch.is_tensor(col_index):
             num_indices = row_index.numel()
             if num_indices > self.matrix_shape.numel():
-                return lazify(self.evaluate())._getitem(row_index, col_index, *batch_indices)
+                return to_linear_operator(self.evaluate())._getitem(row_index, col_index, *batch_indices)
 
         left_tensor = self.root._getitem(row_index, _noop_index, *batch_indices)
         if _equal_indices(row_index, col_index):
             res = self.__class__(left_tensor)
         else:
             right_tensor = self.root._getitem(col_index, _noop_index, *batch_indices)
-            res = MatmulLazyTensor(left_tensor, right_tensor.transpose(-1, -2))
+            res = MatmulLinearOperator(left_tensor, right_tensor.transpose(-1, -2))
 
         return res
 
@@ -75,7 +75,7 @@ class RootLazyTensor(LazyTensor):
         return self
 
     def diag(self):
-        if isinstance(self.root, NonLazyTensor):
+        if isinstance(self.root, NonLinearOperator):
             return (self.root.tensor ** 2).sum(-1)
         else:
             return super().diag()

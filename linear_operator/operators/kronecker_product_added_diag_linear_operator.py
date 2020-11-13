@@ -2,27 +2,27 @@
 
 import torch
 
-from .added_diag_lazy_tensor import AddedDiagLazyTensor
-from .diag_lazy_tensor import DiagLazyTensor
+from .added_diag_linear_operator import AddedDiagLinearOperator
+from .diag_linear_operator import DiagLinearOperator
 
 
-class KroneckerProductAddedDiagLazyTensor(AddedDiagLazyTensor):
-    def __init__(self, *lazy_tensors, preconditioner_override=None):
+class KroneckerProductAddedDiagLinearOperator(AddedDiagLinearOperator):
+    def __init__(self, *linear_operators, preconditioner_override=None):
         # TODO: implement the woodbury formula for diagonal tensors that are non constants.
 
-        super(KroneckerProductAddedDiagLazyTensor, self).__init__(
-            *lazy_tensors, preconditioner_override=preconditioner_override
+        super(KroneckerProductAddedDiagLinearOperator, self).__init__(
+            *linear_operators, preconditioner_override=preconditioner_override
         )
-        if len(lazy_tensors) > 2:
-            raise RuntimeError("An AddedDiagLazyTensor can only have two components")
-        elif isinstance(lazy_tensors[0], DiagLazyTensor):
-            self.diag_tensor = lazy_tensors[0]
-            self.lazy_tensor = lazy_tensors[1]
-        elif isinstance(lazy_tensors[1], DiagLazyTensor):
-            self.diag_tensor = lazy_tensors[1]
-            self.lazy_tensor = lazy_tensors[0]
+        if len(linear_operators) > 2:
+            raise RuntimeError("An AddedDiagLinearOperator can only have two components")
+        elif isinstance(linear_operators[0], DiagLinearOperator):
+            self.diag_tensor = linear_operators[0]
+            self.linear_operator = linear_operators[1]
+        elif isinstance(linear_operators[1], DiagLinearOperator):
+            self.diag_tensor = linear_operators[1]
+            self.linear_operator = linear_operators[0]
         else:
-            raise RuntimeError("One of the LazyTensors input to AddedDiagLazyTensor must be a DiagLazyTensor!")
+            raise RuntimeError("One of the LinearOperators input to AddedDiagLinearOperator must be a DiagLinearOperator!")
 
     def inv_quad_logdet(self, inv_quad_rhs=None, logdet=False, reduce_inv_quad=True):
         # we want to call the standard InvQuadLogDet to easily get the probe vectors and do the
@@ -40,7 +40,7 @@ class KroneckerProductAddedDiagLazyTensor(AddedDiagLazyTensor):
 
     def _logdet(self):
         # symeig requires computing the eigenvectors so that it's differentiable
-        evals, _ = self.lazy_tensor.symeig(eigenvectors=True)
+        evals, _ = self.linear_operator.symeig(eigenvectors=True)
         evals_plus_diag = evals + self.diag_tensor.diag()
         return torch.log(evals_plus_diag).sum(dim=-1)
 
@@ -55,27 +55,27 @@ class KroneckerProductAddedDiagLazyTensor(AddedDiagLazyTensor):
         rhs_dtype = rhs.dtype
         rhs = rhs.double()
 
-        evals, q_matrix = self.lazy_tensor.symeig(eigenvectors=True)
+        evals, q_matrix = self.linear_operator.symeig(eigenvectors=True)
         evals, q_matrix = evals.double(), q_matrix.double()
 
         evals_plus_diagonal = evals + self.diag_tensor.diag()
         evals_root = evals_plus_diagonal.pow(0.5)
-        inv_mat_sqrt = DiagLazyTensor(evals_root.reciprocal())
+        inv_mat_sqrt = DiagLinearOperator(evals_root.reciprocal())
 
         res = q_matrix.transpose(-2, -1).matmul(rhs)
         res2 = inv_mat_sqrt.matmul(res)
 
-        lazy_lhs = q_matrix.matmul(inv_mat_sqrt)
-        return lazy_lhs.matmul(res2).type(rhs_dtype)
+        lhs = q_matrix.matmul(inv_mat_sqrt)
+        return lhs.matmul(res2).type(rhs_dtype)
 
     def _root_decomposition(self):
-        evals, q_matrix = self.lazy_tensor.symeig(eigenvectors=True)
-        updated_evals = DiagLazyTensor((evals + self.diag_tensor.diag()).pow(0.5))
+        evals, q_matrix = self.linear_operator.symeig(eigenvectors=True)
+        updated_evals = DiagLinearOperator((evals + self.diag_tensor.diag()).pow(0.5))
         matrix_root = q_matrix.matmul(updated_evals)
         return matrix_root
 
     def _root_inv_decomposition(self, initial_vectors=None):
-        evals, q_matrix = self.lazy_tensor.symeig(eigenvectors=True)
-        inv_sqrt_evals = DiagLazyTensor((evals + self.diag_tensor.diag()).pow(-0.5))
+        evals, q_matrix = self.linear_operator.symeig(eigenvectors=True)
+        inv_sqrt_evals = DiagLinearOperator((evals + self.diag_tensor.diag()).pow(-0.5))
         matrix_inv_root = q_matrix.matmul(inv_sqrt_evals)
         return matrix_inv_root

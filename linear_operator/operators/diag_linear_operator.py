@@ -7,30 +7,30 @@ from torch import Tensor
 
 from ..utils.broadcasting import _mul_broadcast_shape
 from ..utils.memoize import cached
-from .lazy_tensor import LazyTensor
-from .non_lazy_tensor import NonLazyTensor
-from .triangular_lazy_tensor import TriangularLazyTensor
+from .linear_operator import LinearOperator
+from .non_linear_operator import NonLinearOperator
+from .triangular_linear_operator import TriangularLinearOperator
 
 
-class DiagLazyTensor(TriangularLazyTensor):
+class DiagLinearOperator(TriangularLinearOperator):
     def __init__(self, diag):
         """
-        Diagonal lazy tensor. Supports arbitrary batch sizes.
+        Diagonal linear operator. Supports arbitrary batch sizes.
 
         Args:
             :attr:`diag` (Tensor):
                 A `b1 x ... x bk x n` Tensor, representing a `b1 x ... x bk`-sized batch
                 of `n x n` diagonal matrices
         """
-        super(TriangularLazyTensor, self).__init__(diag)
+        super(TriangularLinearOperator, self).__init__(diag)
         self._diag = diag
 
     def __add__(self, other):
-        if isinstance(other, DiagLazyTensor):
+        if isinstance(other, DiagLinearOperator):
             return self.add_diag(other._diag)
-        from .added_diag_lazy_tensor import AddedDiagLazyTensor
+        from .added_diag_linear_operator import AddedDiagLinearOperator
 
-        return AddedDiagLazyTensor(other, self)
+        return AddedDiagLinearOperator(other, self)
 
     @cached(name="cholesky", ignore_args=True)
     def _cholesky(self, upper=False):
@@ -54,16 +54,16 @@ class DiagLazyTensor(TriangularLazyTensor):
         # multiply element-wise with the diagonal (using proper broadcasting)
         if rhs.ndimension() == 1:
             return self._diag * rhs
-        # special case if we have a NonLazyTensor
-        if isinstance(rhs, NonLazyTensor):
-            return NonLazyTensor(self._diag.unsqueeze(-1) * rhs.tensor)
+        # special case if we have a NonLinearOperator
+        if isinstance(rhs, NonLinearOperator):
+            return NonLinearOperator(self._diag.unsqueeze(-1) * rhs.tensor)
         return self._diag.unsqueeze(-1) * rhs
 
     def _mul_constant(self, constant):
         return self.__class__(self._diag * constant.unsqueeze(-1))
 
     def _mul_matrix(self, other):
-        if isinstance(other, DiagLazyTensor):
+        if isinstance(other, DiagLinearOperator):
             return self.__class__(self._diag * other._diag)
         else:
             return self.__class__(self._diag * other.diag())
@@ -85,7 +85,7 @@ class DiagLazyTensor(TriangularLazyTensor):
         return self.sqrt()
 
     def _root_inv_decomposition(self, initial_vectors=None):
-        return DiagLazyTensor(self._diag.reciprocal()).sqrt()
+        return DiagLinearOperator(self._diag.reciprocal()).sqrt()
 
     def _size(self):
         return self._diag.shape + self._diag.shape[-1:]
@@ -101,11 +101,11 @@ class DiagLazyTensor(TriangularLazyTensor):
         return self
 
     def abs(self):
-        return DiagLazyTensor(self._diag.abs())
+        return DiagLinearOperator(self._diag.abs())
 
     def add_diag(self, added_diag):
         shape = _mul_broadcast_shape(self._diag.shape, added_diag.shape)
-        return DiagLazyTensor(self._diag.expand(shape) + added_diag.expand(shape))
+        return DiagLinearOperator(self._diag.expand(shape) + added_diag.expand(shape))
 
     def diag(self):
         return self._diag
@@ -117,10 +117,10 @@ class DiagLazyTensor(TriangularLazyTensor):
         return torch.diag_embed(self._diag)
 
     def exp(self):
-        return DiagLazyTensor(self._diag.exp())
+        return DiagLinearOperator(self._diag.exp())
 
     def inverse(self):
-        return DiagLazyTensor(self._diag.reciprocal())
+        return DiagLinearOperator(self._diag.reciprocal())
 
     def inv_matmul(self, right_tensor, left_tensor=None):
         res = self.inverse()._matmul(right_tensor)
@@ -153,31 +153,31 @@ class DiagLazyTensor(TriangularLazyTensor):
         return inv_quad_term, logdet_term
 
     def log(self):
-        return DiagLazyTensor(self._diag.log())
+        return DiagLinearOperator(self._diag.log())
 
     def matmul(self, other):
-        from .triangular_lazy_tensor import TriangularLazyTensor
+        from .triangular_linear_operator import TriangularLinearOperator
 
-        # this is trivial if we multiply two DiagLazyTensors
-        if isinstance(other, DiagLazyTensor):
-            return DiagLazyTensor(self._diag * other._diag)
-        # special case if we have a NonLazyTensor
-        if isinstance(other, NonLazyTensor):
-            return NonLazyTensor(self._diag.unsqueeze(-1) * other.tensor)
+        # this is trivial if we multiply two DiagLinearOperators
+        if isinstance(other, DiagLinearOperator):
+            return DiagLinearOperator(self._diag * other._diag)
+        # special case if we have a NonLinearOperator
+        if isinstance(other, NonLinearOperator):
+            return NonLinearOperator(self._diag.unsqueeze(-1) * other.tensor)
         # and if we have a triangular one
-        if isinstance(other, TriangularLazyTensor):
-            return TriangularLazyTensor(self._diag.unsqueeze(-1) * other._tensor, upper=other.upper)
+        if isinstance(other, TriangularLinearOperator):
+            return TriangularLinearOperator(self._diag.unsqueeze(-1) * other._tensor, upper=other.upper)
         return super().matmul(other)
 
     def sqrt(self):
-        return DiagLazyTensor(self._diag.sqrt())
+        return DiagLinearOperator(self._diag.sqrt())
 
     def sqrt_inv_matmul(self, rhs, lhs=None):
         if lhs is None:
-            return DiagLazyTensor(1.0 / (self._diag.sqrt())).matmul(rhs)
+            return DiagLinearOperator(1.0 / (self._diag.sqrt())).matmul(rhs)
         else:
-            matrix_inv_root = DiagLazyTensor(1.0 / (self._diag.sqrt()))
-            sqrt_inv_matmul = lhs @ DiagLazyTensor(1.0 / (self._diag.sqrt())).matmul(rhs)
+            matrix_inv_root = DiagLinearOperator(1.0 / (self._diag.sqrt()))
+            sqrt_inv_matmul = lhs @ DiagLinearOperator(1.0 / (self._diag.sqrt())).matmul(rhs)
             inv_quad = (matrix_inv_root @ lhs.transpose(-2, -1)).transpose(-2, -1).pow(2).sum(dim=-1)
 
             return sqrt_inv_matmul, inv_quad
@@ -187,26 +187,26 @@ class DiagLazyTensor(TriangularLazyTensor):
         return base_samples * self._diag.sqrt()
 
     @cached(name="svd")
-    def _svd(self) -> Tuple[LazyTensor, Tensor, LazyTensor]:
+    def _svd(self) -> Tuple[LinearOperator, Tensor, LinearOperator]:
         evals, evecs = self.symeig(eigenvectors=True)
         S = torch.abs(evals)
         U = evecs
         V = evecs * torch.sign(evals).unsqueeze(-1)
         return U, S, V
 
-    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LazyTensor]]:
+    def _symeig(self, eigenvectors: bool = False) -> Tuple[Tensor, Optional[LinearOperator]]:
         evals = self._diag
         if eigenvectors:
-            evecs = DiagLazyTensor(torch.ones_like(evals))
+            evecs = DiagLinearOperator(torch.ones_like(evals))
         else:
             evecs = None
         return evals, evecs
 
 
-class ConstantDiagLazyTensor(DiagLazyTensor):
+class ConstantDiagLinearOperator(DiagLinearOperator):
     def __init__(self, diag_values, diag_shape):
         """
-        Diagonal lazy tensor with constant entries. Supports arbitrary batch sizes.
+        Diagonal linear operator with constant entries. Supports arbitrary batch sizes.
         Used e.g. for adding jitter to matrices.
 
         Args:
@@ -216,7 +216,7 @@ class ConstantDiagLazyTensor(DiagLazyTensor):
                 A `b1 x ... x bk x 1` Tensor, representing a `b1 x ... x bk`-sized batch
                 of `n x n` diagonal matrices
         """
-        super(TriangularLazyTensor, self).__init__(diag_values, diag_shape=diag_shape)
+        super(TriangularLinearOperator, self).__init__(diag_values, diag_shape=diag_shape)
         self.diag_shape = diag_shape
         self._diag = diag_values.expand(*diag_values.shape[:-1], diag_shape)
 

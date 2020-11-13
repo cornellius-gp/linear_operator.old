@@ -4,14 +4,14 @@ import unittest
 
 import torch
 
-from gpytorch.lazy import CatLazyTensor, NonLazyTensor
-from gpytorch.test.lazy_tensor_test_case import LazyTensorTestCase
+from linear_operator.operators import CatLinearOperator, NonLinearOperator
+from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
-class TestCatLazyTensor(LazyTensorTestCase, unittest.TestCase):
+class TestCatLinearOperator(LinearOperatorTestCase, unittest.TestCase):
     seed = 1
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         root = torch.randn(6, 7)
         self.psd_mat = root.matmul(root.t())
 
@@ -19,20 +19,20 @@ class TestCatLazyTensor(LazyTensorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[2:4, :].requires_grad_()
         slice3_mat = self.psd_mat[4:6, :].requires_grad_()
 
-        slice1 = NonLazyTensor(slice1_mat)
-        slice2 = NonLazyTensor(slice2_mat)
-        slice3 = NonLazyTensor(slice3_mat)
+        slice1 = NonLinearOperator(slice1_mat)
+        slice2 = NonLinearOperator(slice2_mat)
+        slice3 = NonLinearOperator(slice3_mat)
 
-        return CatLazyTensor(slice1, slice2, slice3, dim=-2)
+        return CatLinearOperator(slice1, slice2, slice3, dim=-2)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return self.psd_mat.detach().clone().requires_grad_()
 
 
-class TestCatLazyTensorColumn(LazyTensorTestCase, unittest.TestCase):
+class TestCatLinearOperatorColumn(LinearOperatorTestCase, unittest.TestCase):
     seed = 1
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         root = torch.randn(6, 7)
         self.psd_mat = root.matmul(root.t())
 
@@ -40,20 +40,20 @@ class TestCatLazyTensorColumn(LazyTensorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[:, 2:4].requires_grad_()
         slice3_mat = self.psd_mat[:, 4:6].requires_grad_()
 
-        slice1 = NonLazyTensor(slice1_mat)
-        slice2 = NonLazyTensor(slice2_mat)
-        slice3 = NonLazyTensor(slice3_mat)
+        slice1 = NonLinearOperator(slice1_mat)
+        slice2 = NonLinearOperator(slice2_mat)
+        slice3 = NonLinearOperator(slice3_mat)
 
-        return CatLazyTensor(slice1, slice2, slice3, dim=-1)
+        return CatLinearOperator(slice1, slice2, slice3, dim=-1)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return self.psd_mat.detach().clone().requires_grad_()
 
 
-class TestCatLazyTensorBatch(LazyTensorTestCase, unittest.TestCase):
+class TestCatLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         root = torch.randn(3, 6, 7)
         self.psd_mat = root.matmul(root.transpose(-2, -1))
 
@@ -61,22 +61,22 @@ class TestCatLazyTensorBatch(LazyTensorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[..., 2:4, :].requires_grad_()
         slice3_mat = self.psd_mat[..., 4:6, :].requires_grad_()
 
-        slice1 = NonLazyTensor(slice1_mat)
-        slice2 = NonLazyTensor(slice2_mat)
-        slice3 = NonLazyTensor(slice3_mat)
+        slice1 = NonLinearOperator(slice1_mat)
+        slice2 = NonLinearOperator(slice2_mat)
+        slice3 = NonLinearOperator(slice3_mat)
 
-        return CatLazyTensor(slice1, slice2, slice3, dim=-2)
+        return CatLinearOperator(slice1, slice2, slice3, dim=-2)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return self.psd_mat.detach().clone().requires_grad_()
 
 
-class TestCatLazyTensorMultiBatch(LazyTensorTestCase, unittest.TestCase):
+class TestCatLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
     # Because these LTs are large, we'll skil the big tests
     skip_slq_tests = True
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         root = torch.randn(4, 3, 6, 7)
         self.psd_mat = root.matmul(root.transpose(-2, -1))
 
@@ -84,22 +84,22 @@ class TestCatLazyTensorMultiBatch(LazyTensorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[..., 2:4, :].requires_grad_()
         slice3_mat = self.psd_mat[..., 4:6, :].requires_grad_()
 
-        slice1 = NonLazyTensor(slice1_mat)
-        slice2 = NonLazyTensor(slice2_mat)
-        slice3 = NonLazyTensor(slice3_mat)
+        slice1 = NonLinearOperator(slice1_mat)
+        slice2 = NonLinearOperator(slice2_mat)
+        slice3 = NonLinearOperator(slice3_mat)
 
-        return CatLazyTensor(slice1, slice2, slice3, dim=-2)
+        return CatLinearOperator(slice1, slice2, slice3, dim=-2)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return self.psd_mat.detach().clone().requires_grad_()
 
 
-class TestCatLazyTensorBatchCat(LazyTensorTestCase, unittest.TestCase):
+class TestCatLinearOperatorBatchCat(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
     # Because these LTs are large, we'll skil the big tests
     skip_slq_tests = True
 
-    def create_lazy_tensor(self):
+    def create_linear_operator(self):
         root = torch.randn(5, 3, 6, 7)
         self.psd_mat = root.matmul(root.transpose(-2, -1))
 
@@ -107,13 +107,13 @@ class TestCatLazyTensorBatchCat(LazyTensorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[2:3, ...].requires_grad_()
         slice3_mat = self.psd_mat[3:, ...].requires_grad_()
 
-        slice1 = NonLazyTensor(slice1_mat)
-        slice2 = NonLazyTensor(slice2_mat)
-        slice3 = NonLazyTensor(slice3_mat)
+        slice1 = NonLinearOperator(slice1_mat)
+        slice2 = NonLinearOperator(slice2_mat)
+        slice3 = NonLinearOperator(slice3_mat)
 
-        return CatLazyTensor(slice1, slice2, slice3, dim=0)
+        return CatLinearOperator(slice1, slice2, slice3, dim=0)
 
-    def evaluate_lazy_tensor(self, lazy_tensor):
+    def evaluate_linear_operator(self, linear_operator):
         return self.psd_mat.detach().clone().requires_grad_()
 
 

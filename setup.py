@@ -26,7 +26,7 @@ version = find_version("linear_operator", "__init__.py")
 
 
 torch_min = "1.7"
-install_requires = [">=".join(["torch", torch_min])]
+install_requires = [">=".join(["torch", torch_min]), "scipy"]
 # if recent dev version of PyTorch is installed, no need to install stable
 try:
     import torch

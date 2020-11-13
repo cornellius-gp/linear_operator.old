@@ -6,7 +6,7 @@ from .. import settings
 
 
 def pivoted_cholesky(matrix, max_iter, error_tol=None):
-    from ..lazy import lazify, LazyTensor
+    from ..operators import to_linear_operator, LinearOperator
 
     batch_shape = matrix.shape[:-2]
     matrix_shape = matrix.shape[-2:]
@@ -14,9 +14,9 @@ def pivoted_cholesky(matrix, max_iter, error_tol=None):
     if error_tol is None:
         error_tol = settings.preconditioner_tolerance.value()
 
-    # Need to get diagonals. This is easy if it's a LazyTensor, since
-    # LazyTensor.diag() operates in batch mode.
-    matrix = lazify(matrix)
+    # Need to get diagonals. This is easy if it's a LinearOperator, since
+    # LinearOperator.diag() operates in batch mode.
+    matrix = to_linear_operator(matrix)
     matrix_diag = matrix._approx_diag()
 
     # Make sure max_iter isn't bigger than the matrix
@@ -58,7 +58,7 @@ def pivoted_cholesky(matrix, max_iter, error_tol=None):
         L_m.scatter_(-1, pi_m.unsqueeze(-1), max_diag_values.sqrt().unsqueeze_(-1))
 
         row = matrix[(*batch_iters, pi_m.view(-1), slice(None, None, None))]
-        if isinstance(row, LazyTensor):
+        if isinstance(row, LinearOperator):
             row = row.evaluate()
         row = row.view(*batch_shape, matrix_shape[-1])
 
