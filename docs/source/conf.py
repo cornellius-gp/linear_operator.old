@@ -55,6 +55,7 @@ release = version
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinx.ext.intersphinx",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
@@ -81,4 +82,25 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+html_static_path = []
+
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "torch": ("https://pytorch.org/docs/master/", None),
+}
+
+# Disable documentation inheritance so as to avoid inheriting
+# docstrings in a different format, e.g. when the parent class
+# is a PyTorch class.
+
+autodoc_inherit_docstrings = False
+
+# Taken from https://github.com/pyro-ppl/pyro/blob/dev/docs/source/conf.py#L213
+# @jpchen's hack to get rtd builder to install latest pytorch
+# See similar line in the install section of .travis.yml
+if "READTHEDOCS" in os.environ:
+    os.system(
+        "pip install torch==1.5.0+cpu torchvision==0.6.0+cpu "
+        "-f https://download.pytorch.org/whl/torch_stable.html"
+    )
