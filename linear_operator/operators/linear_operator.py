@@ -17,7 +17,6 @@ from ..functions._root_decomposition import RootDecomposition
 from ..functions._sqrt_inv_matmul import SqrtInvMatmul
 from ..utils.broadcasting import _matmul_broadcast_shape, _mul_broadcast_shape
 from ..utils.cholesky import psd_safe_cholesky
-from ..utils.deprecation import _deprecate_renamed_methods
 from ..utils.errors import CachingError
 from ..utils.getitem import _compute_getitem_size, _convert_indices_to_tensors, _is_noop_index, _noop_index
 from ..utils.memoize import add_to_cache, cached, pop_from_cache
@@ -1942,14 +1941,6 @@ class LinearOperator(ABC):
         return self + other.mul(-1)
 
 
-def _import_dotted_name(name):
-    components = name.split(".")
-    obj = __import__(components[0])
-    for component in components[1:]:
-        obj = getattr(obj, component)
-    return obj
-
-
 def to_dense(obj):
     """
     A function which ensures that `obj` is a (normal) Tensor.
@@ -1965,7 +1956,5 @@ def to_dense(obj):
     else:
         raise TypeError("object of class {} cannot be made into a Tensor".format(obj.__class__.__name__))
 
-
-_deprecate_renamed_methods(LinearOperator, inv_quad_log_det="inv_quad_logdet", log_det="logdet")
 
 __all__ = ["LinearOperator", "to_dense"]
