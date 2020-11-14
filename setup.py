@@ -52,7 +52,7 @@ setup(
     install_requires=install_requires,
     extras_require={
         "dev": ["black", "twine", "pre-commit"],
-        "docs": ["sphinx<3.0.0", "sphinx_rtd_theme"],
+        "docs": ["sphinx<3.0.0", "sphinx_rtd_theme", "sphinx-autodoc-typehints"],
         "test": ["flake8", "flake8-print"],
     },
 )
