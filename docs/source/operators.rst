@@ -1,38 +1,18 @@
 .. role:: hidden
     :class: hidden-section
 
-linear_operator.operators
-===================================
-
 .. automodule:: linear_operator.operators
 .. currentmodule:: linear_operator.operators
 
+Data-Sparse LinearOperators
+===================================
 
-LinearOperator
-----------------
-
-.. autoclass:: LinearOperator
-   :members:
-
-.. autoclass:: BlockLinearOperator
-   :members:
-
-
-Structured LinearOperators
------------------------------------
 
 :hidden:`BlockDiagLinearOperator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: BlockDiagLinearOperator
    :members:
-
-:hidden:`CatLinearOperator`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: CatLinearOperator
-   :members:
-
 
 :hidden:`CholLinearOperator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,22 +26,10 @@ Structured LinearOperators
 .. autoclass:: DiagLinearOperator
    :members:
 
-:hidden:`MatmulLinearOperator`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: MatmulLinearOperator
-   :members:
-
 :hidden:`RootLinearOperator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: RootLinearOperator
-   :members:
-
-:hidden:`NonLinearOperator`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: NonLinearOperator
    :members:
 
 :hidden:`ToeplitzLinearOperator`
@@ -78,12 +46,18 @@ Structured LinearOperators
 
 
 Composition/Decoration LinearOperators
----------------------------------------
+=========================================
 
 :hidden:`AddedDiagLinearOperator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: AddedDiagLinearOperator
+   :members:
+
+:hidden:`CatLinearOperator`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: CatLinearOperator
    :members:
 
 :hidden:`ConstantMulLinearOperator`
@@ -102,6 +76,12 @@ Composition/Decoration LinearOperators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: KroneckerProductLinearOperator
+   :members:
+
+:hidden:`MatmulLinearOperator`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MatmulLinearOperator
    :members:
 
 :hidden:`MulLinearOperator`

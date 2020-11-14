@@ -10,9 +10,25 @@ LinearOperator Documentation
 
 .. toctree::
    :maxdepth: 1
-   :caption: Package Reference
+   :caption: Basic Concepts
+
+   linear_operator
+   converting
+   structure
+   custom_linear_operators
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Linear Operator Objects
 
    operators
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Advanced Package Reference
+
    settings
    functions
    utils

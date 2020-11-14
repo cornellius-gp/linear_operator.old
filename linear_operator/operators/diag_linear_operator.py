@@ -133,7 +133,7 @@ class DiagLinearOperator(TriangularLinearOperator):
         if inv_quad_rhs is None:
             rhs_batch_shape = torch.Size()
         else:
-            rhs_batch_shape = inv_quad_rhs.shape[1 + self.batch_dim :]
+            rhs_batch_shape = inv_quad_rhs.shape[1 + self.batch_dim() :]
 
         if inv_quad_rhs is None:
             inv_quad_term = torch.empty(0, dtype=self.dtype, device=self.device)

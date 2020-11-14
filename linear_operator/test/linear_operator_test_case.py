@@ -53,10 +53,10 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
         evaluated = self.evaluate_linear_operator(linear_operator)
 
         rhs = torch.randn(linear_operator.shape)
-        self.assertAllClose((linear_operator + rhs).evaluate(), evaluated + rhs)
+        self.assertAllClose((linear_operator.add(rhs)).evaluate(), evaluated + rhs)
 
         rhs = torch.randn(linear_operator.matrix_shape)
-        self.assertAllClose((linear_operator + rhs).evaluate(), evaluated + rhs)
+        self.assertAllClose((linear_operator.add(rhs, alpha=0.2)).evaluate(), evaluated + 0.2 * rhs)
 
         rhs = torch.randn(2, *linear_operator.shape)
         self.assertAllClose((linear_operator + rhs).evaluate(), evaluated + rhs)
@@ -241,6 +241,19 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
 
         for dc, da in zip(deriv_custom, deriv_auto):
             self.assertAllClose(dc, da)
+
+    def test_sub(self):
+        linear_operator = self.create_linear_operator()
+        evaluated = self.evaluate_linear_operator(linear_operator)
+
+        rhs = torch.randn(linear_operator.shape)
+        self.assertAllClose((linear_operator.sub(rhs)).evaluate(), evaluated - rhs)
+
+        rhs = torch.randn(linear_operator.matrix_shape)
+        self.assertAllClose((linear_operator.sub(rhs, alpha=0.1)).evaluate(), evaluated - 0.1 * rhs)
+
+        rhs = torch.randn(2, *linear_operator.shape)
+        self.assertAllClose((linear_operator - rhs).evaluate(), evaluated - rhs)
 
     def test_sum(self):
         linear_operator = self.create_linear_operator()
