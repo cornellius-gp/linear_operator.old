@@ -37,7 +37,7 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
         linear_operator_copy = linear_operator.clone().detach_().requires_grad_(True)
         evaluated = self.evaluate_linear_operator(linear_operator_copy)
 
-        res = linear_operator.matmul(rhs)
+        res = torch.matmul(linear_operator, rhs)
         actual = evaluated.matmul(rhs)
         self.assertAllClose(res, actual)
 
@@ -53,7 +53,7 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
         evaluated = self.evaluate_linear_operator(linear_operator)
 
         rhs = torch.randn(linear_operator.shape)
-        self.assertAllClose((linear_operator.add(rhs)).evaluate(), evaluated + rhs)
+        self.assertAllClose((torch.add(linear_operator, rhs)).evaluate(), evaluated + rhs)
 
         rhs = torch.randn(linear_operator.matrix_shape)
         self.assertAllClose((linear_operator.add(rhs, alpha=0.2)).evaluate(), evaluated + 0.2 * rhs)
@@ -99,7 +99,7 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
     def test_constant_mul(self):
         linear_operator = self.create_linear_operator()
         evaluated = self.evaluate_linear_operator(linear_operator)
-        self.assertAllClose((linear_operator * 5).evaluate(), evaluated * 5)
+        self.assertAllClose(torch.mul(linear_operator, 5).evaluate(), evaluated * 5)
 
     def test_evaluate(self):
         linear_operator = self.create_linear_operator()
@@ -247,7 +247,7 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
         evaluated = self.evaluate_linear_operator(linear_operator)
 
         rhs = torch.randn(linear_operator.shape)
-        self.assertAllClose((linear_operator.sub(rhs)).evaluate(), evaluated - rhs)
+        self.assertAllClose(torch.sub(linear_operator, rhs).evaluate(), evaluated - rhs)
 
         rhs = torch.randn(linear_operator.matrix_shape)
         self.assertAllClose((linear_operator.sub(rhs, alpha=0.1)).evaluate(), evaluated - 0.1 * rhs)
@@ -259,8 +259,9 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
         linear_operator = self.create_linear_operator()
         evaluated = self.evaluate_linear_operator(linear_operator)
 
+        self.assertAllClose(torch.sum(linear_operator), evaluated.sum())
         self.assertAllClose(linear_operator.sum(-1), evaluated.sum(-1))
-        self.assertAllClose(linear_operator.sum(-2), evaluated.sum(-2))
+        self.assertAllClose(torch.sum(linear_operator, -2), evaluated.sum(-2))
         if linear_operator.ndimension() > 2:
             self.assertAllClose(linear_operator.sum(-3).evaluate(), evaluated.sum(-3))
         if linear_operator.ndimension() > 3:
@@ -272,7 +273,7 @@ class RectangularLinearOperatorTestCase(BaseTestCase):
 
         if linear_operator.dim() >= 4:
             for i, j in combinations(range(linear_operator.dim() - 2), 2):
-                res = linear_operator.transpose(i, j).evaluate()
+                res = torch.transpose(linear_operator, i, j).evaluate()
                 actual = evaluated.transpose(i, j)
                 self.assertAllClose(res, actual, rtol=1e-4, atol=1e-5)
 
@@ -304,7 +305,7 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
                     res = linear_operator.inv_matmul(rhs, lhs)
                     actual = lhs_copy @ evaluated.inverse() @ rhs_copy
                 else:
-                    res = linear_operator.inv_matmul(rhs)
+                    res = torch.solve(rhs, linear_operator)
                     actual = evaluated.inverse().matmul(rhs_copy)
                 self.assertAllClose(res, actual, rtol=0.02, atol=1e-5)
 
@@ -396,18 +397,35 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
         linear_operator = self.create_linear_operator()
         evaluated = self.evaluate_linear_operator(linear_operator)
         for upper in (False, True):
-            res = linear_operator.cholesky(upper=upper).evaluate()
+            res = torch.cholesky(linear_operator, upper=upper)
             actual = torch.cholesky(evaluated, upper=upper)
-            self.assertAllClose(res, actual, rtol=1e-3, atol=1e-5)
+            self.assertAllClose(res.evaluate(), actual, rtol=1e-3, atol=1e-5)
+
+            rhs = torch.randn(linear_operator.size(-2), 3)
+            self.assertAllClose(
+                torch.cholesky_solve(rhs, res, upper=upper),
+                rhs.cholesky_solve(actual, upper=upper),
+                rtol=1e-3,
+                atol=1e-5,
+            )
             # TODO: Check gradients
 
     def test_diag(self):
         linear_operator = self.create_linear_operator()
         evaluated = self.evaluate_linear_operator(linear_operator)
 
-        res = linear_operator.diag()
+        res = torch.diagonal(linear_operator)
         actual = evaluated.diagonal(dim1=-2, dim2=-1)
         actual = actual.view(*linear_operator.batch_shape, -1)
+        self.assertAllClose(res, actual, rtol=1e-2, atol=1e-5)
+
+    def test_div(self):
+        linear_operator = self.create_linear_operator()
+        evaluated = self.evaluate_linear_operator(linear_operator)
+        rhs = torch.rand_like(evaluated)
+
+        res = torch.div(linear_operator, rhs).evaluate()
+        actual = evaluated / rhs
         self.assertAllClose(res, actual, rtol=1e-2, atol=1e-5)
 
     def test_inv_matmul_vector(self, cholesky=False):
@@ -481,15 +499,25 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
     def test_inv_quad_logdet_no_reduce_cholesky(self):
         return self._test_inv_quad_logdet(reduce_inv_quad=True, cholesky=True)
 
+    def test_logdet(self):
+        linear_operator = self.create_linear_operator()
+        evaluated = self.evaluate_linear_operator(linear_operator)
+        with settings.max_cholesky_size(math.inf):
+            self.assertAllClose(torch.logdet(linear_operator), evaluated.logdet(), atol=1e-2, rtol=1e-2)
+
     def test_prod(self):
         with settings.fast_computations(covar_root_decomposition=False):
             linear_operator = self.create_linear_operator()
             evaluated = self.evaluate_linear_operator(linear_operator)
 
             if linear_operator.ndimension() > 2:
-                self.assertAllClose(linear_operator.prod(-3).evaluate(), evaluated.prod(-3), atol=1e-2, rtol=1e-2)
+                self.assertAllClose(
+                    torch.prod(linear_operator, -3).evaluate(), evaluated.prod(-3), atol=1e-2, rtol=1e-2
+                )
             if linear_operator.ndimension() > 3:
-                self.assertAllClose(linear_operator.prod(-4).evaluate(), evaluated.prod(-4), atol=1e-2, rtol=1e-2)
+                self.assertAllClose(
+                    torch.prod(linear_operator, -4).evaluate(), evaluated.prod(-4), atol=1e-2, rtol=1e-2
+                )
 
     def test_root_decomposition(self, cholesky=False):
         _wrapped_lanczos = MagicMock(wraps=lanczos_tridiag)
@@ -535,7 +563,7 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
         if len(linear_operator.batch_shape):
             return
 
-        linear_operator_copy = linear_operator.clone().detach_().requires_grad_(True)
+        linear_operator_copy = torch.clone(linear_operator).detach_().requires_grad_(True)
         evaluated = self.evaluate_linear_operator(linear_operator_copy)
         evaluated.register_hook(_ensure_symmetric_grad)
 
@@ -575,7 +603,7 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
         if len(linear_operator.batch_shape):
             return
 
-        linear_operator_copy = linear_operator.clone().detach_().requires_grad_(True)
+        linear_operator_copy = torch.detach_(linear_operator.clone()).requires_grad_(True)
         evaluated = self.evaluate_linear_operator(linear_operator_copy)
         evaluated.register_hook(_ensure_symmetric_grad)
 
@@ -604,13 +632,24 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
             if arg_copy.requires_grad and arg_copy.is_leaf and arg_copy.grad is not None:
                 self.assertAllClose(arg.grad, arg_copy.grad, rtol=1e-4, atol=1e-3)
 
+    # TODO implement this and fix failing test cases
+    # def test_squeeze_unsqueeze(self):
+    # linear_operator = self.create_linear_operator()
+    # evaluated = self.evaluate_linear_operator(linear_operator)
+
+    # unsqueezed = torch.unsqueeze(linear_operator, -3)
+    # self.assertAllClose(unsqueezed.evaluate(), evaluated.unsqueeze(-3), rtol=1e-4, atol=1e-3)
+
+    # squeezed = torch.squeeze(unsqueezed, -3)
+    # self.assertAllClose(squeezed.evaluate(), evaluated, rtol=1e-4, atol=1e-3)
+
     def test_symeig(self):
         linear_operator = self.create_linear_operator().requires_grad_(True)
-        linear_operator_copy = linear_operator.clone().detach_().requires_grad_(True)
+        linear_operator_copy = torch.detach(linear_operator.clone()).requires_grad_(True)
         evaluated = self.evaluate_linear_operator(linear_operator_copy)
 
         # Perform forward pass
-        evals_unsorted, evecs_unsorted = linear_operator.symeig(eigenvectors=True)
+        evals_unsorted, evecs_unsorted = torch.symeig(linear_operator, eigenvectors=True)
         evecs_unsorted = evecs_unsorted.evaluate()
 
         # since LinearOperator.symeig does not sort evals, we do this here for the check
@@ -657,7 +696,7 @@ class LinearOperatorTestCase(RectangularLinearOperatorTestCase):
         evaluated = self.evaluate_linear_operator(linear_operator_copy)
 
         # Perform forward pass
-        U_unsorted, S_unsorted, V_unsorted = linear_operator.svd()
+        U_unsorted, S_unsorted, V_unsorted = torch.svd(linear_operator)
         U_unsorted, V_unsorted = U_unsorted.evaluate(), V_unsorted.evaluate()
 
         # since LinearOperator.svd does not sort the singular values, we do this here for the check

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import functools
 import math
 import warnings
 from abc import ABC, abstractmethod
@@ -23,6 +24,41 @@ from ..utils.memoize import add_to_cache, cached, pop_from_cache
 from ..utils.pivoted_cholesky import pivoted_cholesky
 from ..utils.warnings import NumericalWarning
 from .linear_operator_representation_tree import LinearOperatorRepresentationTree
+
+HANDLED_FUNCTIONS = {}
+HANDLED_SECOND_ARG_FUNCTIONS = {}
+COMPATIBLE_TYPES = {}
+
+
+def implements(torch_function, types=None):
+    """Register a torch function override for LinearOperator"""
+
+    @functools.wraps(torch_function)
+    def decorator(func):
+        HANDLED_FUNCTIONS[torch_function] = func
+        COMPATIBLE_TYPES[torch_function] = types
+        return func
+
+    return decorator
+
+
+def implements_second_arg(torch_function, types=None):
+    """
+    Register a torch function override for LinearOperator,
+    where the first argument of the function is a torch.Tensor and the
+    second argument is a LinearOperator
+
+    Examples of this include :meth:`torch.cholesky_solve`, `torch.solve`,
+    or `torch.matmul`.
+    """
+
+    @functools.wraps(torch_function)
+    def decorator(func):
+        HANDLED_SECOND_ARG_FUNCTIONS[torch_function] = func
+        COMPATIBLE_TYPES[torch_function] = types
+        return func
+
+    return decorator
 
 
 class LinearOperator(ABC):
@@ -644,6 +680,7 @@ class LinearOperator(ABC):
         """
         return self.transpose(-1, -2)._matmul(rhs)
 
+    @implements(torch.add)
     def add(self, other: Union[torch.Tensor, "LinearOperator"], alpha: float = None) -> "LinearOperator":
         r"""
         Each element of the tensor :attr:`other` is multiplied by the scalar :attr:`alpha`
@@ -720,6 +757,7 @@ class LinearOperator(ABC):
     def batch_shape(self):
         return self.shape[:-2]
 
+    @implements(torch.cholesky)
     def cholesky(self, upper: bool = False) -> "LinearOperator":
         """
         Cholesky-factorizes the LinearOperator.
@@ -733,6 +771,24 @@ class LinearOperator(ABC):
             chol = chol._transpose_nonbatch()
         return chol
 
+    @implements_second_arg(torch.cholesky_solve)
+    def cholesky_solve(self, rhs, upper: bool = False) -> torch.Tensor:
+        r"""
+        If the LinearOperator represnents a Cholesky factor :math:`\mathbf {LL^\top} = \mathbf A`,
+        this function computes :math:`\mathbf {\mathbf A}^\top \mathbf B`, where :math:`\mathbf B`
+        is defined by :attr:`rhs`.
+
+        .. note::
+            This method is only defined for :obj:`~linear_operator.operators.TriangularLinearOperator`.
+
+        :param torch.Tensor rhs: Matrix :math:`\mathbf B` to solve against.
+        :param bool upper: Upper triangular or lower triangular factor (default: False).
+        :rtype: torch.Tensor
+        :return: :math:`\mathbf A^{-1} \mathbf B`.
+        """
+        return self._cholesky_solve(rhs, upper=upper)
+
+    @implements(torch.clone)
     def clone(self) -> "LinearOperator":
         """
         Clones the LinearOperator (creates clones of all underlying tensors)
@@ -785,6 +841,7 @@ class LinearOperator(ABC):
     def device(self) -> str:
         return self._args[0].device
 
+    @implements(torch.detach)
     def detach(self) -> "LinearOperator":
         """
         Removes the LinearOperator from the current computation graph.
@@ -793,6 +850,7 @@ class LinearOperator(ABC):
         """
         return self.clone().detach_()
 
+    @implements(torch.detach_)
     def detach_(self) -> "LinearOperator":
         """
         An in-place version of :meth:`detach`.
@@ -806,6 +864,7 @@ class LinearOperator(ABC):
         return self
 
     # TODO: rename to diagonal
+    @implements(torch.diagonal)
     def diag(self) -> torch.Tensor:
         r"""
         As :func:`torch.diag`, returns the diagonal of the matrix
@@ -827,16 +886,18 @@ class LinearOperator(ABC):
         """
         return self.ndimension()
 
-    def div(self, other: Union[float, torch.Tensor]) -> torch.Tensor:
+    @implements(torch.div)
+    def div(self, other: Union[float, torch.Tensor]) -> "LinearOperator":
         """
         Returns the product of this LinearOperator
         the elementwise reciprocal of another matrix.
 
         :param other: Object to divide against
         :type other: float or torch.Tensor
+        :rtype: ~linear_opeator.operators.LinearOperator
         :return: Result of division.
         """
-        return self / other
+        return self.__div__(other)
 
     def double(self) -> "LinearOperator":
         """
@@ -918,7 +979,8 @@ class LinearOperator(ABC):
             res = self.matmul(eye)
         return res
 
-    # TODO: rename to solve
+    # TODO: rename to `solve_against`?
+    @implements_second_arg(torch.solve)
     def inv_matmul(self, right_tensor: torch.Tensor, left_tensor: Optional[torch.Tensor] = None) -> torch.Tensor:
         r"""
         Computes a linear solve (w.r.t self = :math:`\mathbf A`) with several
@@ -1098,6 +1160,7 @@ class LinearOperator(ABC):
     def is_square(self):
         return self.matrix_shape[0] == self.matrix_shape[1]
 
+    @implements(torch.logdet)
     def logdet(self) -> torch.Tensor:
         r"""
         Computes the log determinant :math:`\log \vert \mathbf A \vert`.
@@ -1105,6 +1168,7 @@ class LinearOperator(ABC):
         _, res = self.inv_quad_logdet(inv_quad_rhs=None, logdet=True)
         return res
 
+    @implements(torch.matmul)
     def matmul(self, other: Union[torch.Tensor, "LinearOperator"]) -> Union[torch.Tensor, "LinearOperator"]:
         r"""
         Performs :math:`\mathbf A \mathbf B`, where :math:`\mathbf A \in
@@ -1118,20 +1182,13 @@ class LinearOperator(ABC):
             The return type will be the same as :attr:`other`'s type.
         """
         # TODO: Move this check to MatmulLinearOperator and Matmul (so we can pass the shapes through from there)
-        _matmul_broadcast_shape(self.shape, other.shape)
-
-        if isinstance(other, LinearOperator):
-            from .matmul_linear_operator import MatmulLinearOperator
-
-            return MatmulLinearOperator(self, other)
-
-        func = Matmul()
-        return func.apply(self.representation_tree(), other, *self.representation())
+        return self @ other
 
     @property
     def matrix_shape(self):
         return torch.Size(self.shape[-2:])
 
+    @implements(torch.mul)
     def mul(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         """
         Multiplies the matrix by a constant, or elementwise the matrix by another matrix.
@@ -1143,29 +1200,7 @@ class LinearOperator(ABC):
             :obj:`~linear_operator.operators.ConstantMulLinearOperator`. If :obj:`other` was
             a matrix or LinearOperator, this will likely be a :obj:`MulLinearOperator`.
         """
-        from .zero_linear_operator import ZeroLinearOperator
-        from .non_linear_operator import to_linear_operator
-
-        if isinstance(other, ZeroLinearOperator):
-            return other
-
-        if not (torch.is_tensor(other) or isinstance(other, LinearOperator)):
-            other = torch.tensor(other, dtype=self.dtype, device=self.device)
-
-        try:
-            _mul_broadcast_shape(self.shape, other.shape)
-        except RuntimeError:
-            raise RuntimeError(
-                "Cannot multiply LinearOperator of size {} by an object of size {}".format(self.shape, other.shape)
-            )
-
-        if torch.is_tensor(other):
-            if other.numel() == 1:
-                return self._mul_constant(other.squeeze())
-            elif other.shape[-2:] == torch.Size((1, 1)):
-                return self._mul_constant(other.view(*other.shape[:-2]))
-
-        return self._mul_matrix(to_linear_operator(other))
+        return self * other
 
     def ndimension(self) -> int:
         """
@@ -1216,19 +1251,14 @@ class LinearOperator(ABC):
         return self._permute_batch(*dims[:-2])
 
     # TODO: implement keepdim
-    def prod(self, dim: int = None) -> Union["LinearOperator", torch.Tensor]:
+    @implements(torch.prod)
+    def prod(self, dim: int) -> Union["LinearOperator", torch.Tensor]:
         r"""
-        Returns the product of all elements in the LinearOperator :math:`\mathbf A`.
-
-        If :attr:`dim` is supplied, returns the product of each row of :math:`\mathbf A`
-        along the dimension :attr:`dim`.
+        Returns the product of each row of :math:`\mathbf A` along the batch dimension :attr:`dim`.
 
         :param dim: Which dimension to compute the product along.
         :type dim: int, optional
         :rtype: ~linear_operator.operators.LinearOperator or torch.Tensor
-        :return: If multiplication occurs over a batch dimension, the output will be a LinearOperator.
-            If multiplication occurs over a matrix dimension (or all
-            dimensions), the output will be a :obj:`torch.Tensor`.
 
         Example:
 
@@ -1240,7 +1270,7 @@ class LinearOperator(ABC):
                 ]))
             >>> linear_operator.prod().evaluate()
             >>> # Returns: torch.Tensor(768.)
-            >>> linear_operator.prod(dim=-1)
+            >>> linear_operator.prod(dim=-3)
             >>> # Returns: tensor([[8., 2.], [1., -2.], [2., 1.], [6., -2.]])
         """
         if dim is None:
@@ -1557,6 +1587,7 @@ class LinearOperator(ABC):
         else:
             return sqrt_inv_matmul_res, inv_quad_res
 
+    @implements(torch.squeeze)
     def squeeze(self, dim: int) -> Union["LinearOperator", torch.Tensor]:
         """
         Removes the singleton dimension of a LinearOperator specifed by :attr:`dim`.
@@ -1574,6 +1605,7 @@ class LinearOperator(ABC):
             index = tuple(index)
             return self[index]
 
+    @implements(torch.sub)
     def sub(self, other: Union[torch.Tensor, "LinearOperator"], alpha: float = None) -> "LinearOperator":
         r"""
         Each element of the tensor :attr:`other` is multiplied by the scalar :attr:`alpha`
@@ -1594,6 +1626,7 @@ class LinearOperator(ABC):
         else:
             return self + (alpha * -1) * other
 
+    @implements(torch.sum)
     def sum(self, dim: Optional[int] = None) -> Union["LinearOperator", torch.Tensor]:
         """
         Sum the LinearOperator across a dimension.
@@ -1618,7 +1651,7 @@ class LinearOperator(ABC):
         """
         # Case: summing everything
         if dim is None:
-            ones = torch.ones(self.size(-2), 1, dtype=self.dtype, device=self.device)
+            ones = torch.ones(self.size(-1), 1, dtype=self.dtype, device=self.device)
             return (self @ ones).sum()
 
         # Otherwise: make dim positive
@@ -1640,6 +1673,7 @@ class LinearOperator(ABC):
         else:
             raise ValueError("Invalid dim ({}) for LinearOperator of size {}".format(orig_dim, self.shape))
 
+    @implements(torch.svd)
     def svd(self) -> Tuple["LinearOperator", torch.Tensor, "LinearOperator"]:
         r"""
         Compute the SVD of the linear operator :math:`\mathbf A \in \mathbb R^{M \times N}`
@@ -1659,6 +1693,7 @@ class LinearOperator(ABC):
         return self._svd()
 
     @cached(name="symeig")
+    @implements(torch.symeig)
     def symeig(self, eigenvectors: bool = False) -> Tuple[torch.Tensor, Optional["LinearOperator"]]:
         """
         Compute the symmetric eigendecomposition of the linear operator.
@@ -1676,7 +1711,7 @@ class LinearOperator(ABC):
         """
         try:
             evals, evecs = pop_from_cache(self, "symeig", eigenvectors=True)
-            return evals, None
+            return evals, (evecs if eigenvectors else None)
         except CachingError:
             pass
         return self._symeig(eigenvectors=eigenvectors)
@@ -1702,6 +1737,7 @@ class LinearOperator(ABC):
                 new_kwargs[name] = val
         return self.__class__(*new_args, **new_kwargs)
 
+    @implements(torch.t)
     def t(self) -> "LinearOperator":
         """
         Alias of :meth:`transpose` for a non-batched LinearOperator.
@@ -1711,6 +1747,7 @@ class LinearOperator(ABC):
             raise RuntimeError("Cannot call t for more than 2 dimensions")
         return self.transpose(0, 1)
 
+    @implements(torch.transpose)
     def transpose(self, dim1: int, dim2: int) -> "LinearOperator":
         """
         Transpose the dimensions :attr:`dim1` and :attr:`dim2` of the LinearOperator.
@@ -1750,6 +1787,7 @@ class LinearOperator(ABC):
 
         return res
 
+    @implements(torch.unsqueeze)
     def unsqueeze(self, dim: int) -> "LinearOperator":
         """
         Inserts a singleton batch dimension of a LinearOperator, specifed by :attr:`dim`.
@@ -1809,7 +1847,7 @@ class LinearOperator(ABC):
 
         return samples
 
-    def __add__(self, other):
+    def __add__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         from .sum_linear_operator import SumLinearOperator
         from .zero_linear_operator import ZeroLinearOperator
         from .diag_linear_operator import DiagLinearOperator
@@ -1830,7 +1868,7 @@ class LinearOperator(ABC):
         else:
             return SumLinearOperator(self, other)
 
-    def __div__(self, other):
+    def __div__(self, other: Union[float, torch.Tensor]) -> "LinearOperator":
         from .zero_linear_operator import ZeroLinearOperator
 
         if isinstance(other, ZeroLinearOperator):
@@ -1922,23 +1960,66 @@ class LinearOperator(ABC):
         # We're done!
         return res
 
-    def __matmul__(self, other):
-        return self.matmul(other)
+    def __matmul__(self, other: Union[torch.Tensor, "LinearOperator"]) -> Union[torch.Tensor, "LinearOperator"]:
+        _matmul_broadcast_shape(self.shape, other.shape)
 
-    def __mul__(self, other):
-        return self.mul(other)
+        if isinstance(other, LinearOperator):
+            from .matmul_linear_operator import MatmulLinearOperator
 
-    def __radd__(self, other):
+            return MatmulLinearOperator(self, other)
+
+        func = Matmul()
+        return func.apply(self.representation_tree(), other, *self.representation())
+
+    def __mul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+        from .zero_linear_operator import ZeroLinearOperator
+        from .non_linear_operator import to_linear_operator
+
+        if isinstance(other, ZeroLinearOperator):
+            return other
+
+        if not (torch.is_tensor(other) or isinstance(other, LinearOperator)):
+            other = torch.tensor(other, dtype=self.dtype, device=self.device)
+
+        try:
+            _mul_broadcast_shape(self.shape, other.shape)
+        except RuntimeError:
+            raise RuntimeError(
+                "Cannot multiply LinearOperator of size {} by an object of size {}".format(self.shape, other.shape)
+            )
+
+        if torch.is_tensor(other):
+            if other.numel() == 1:
+                return self._mul_constant(other.squeeze())
+            elif other.shape[-2:] == torch.Size((1, 1)):
+                return self._mul_constant(other.view(*other.shape[:-2]))
+
+        return self._mul_matrix(to_linear_operator(other))
+
+    def __radd__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         return self + other
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         return self.mul(other)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         return self.mul(-1) + other
 
-    def __sub__(self, other):
+    def __sub__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         return self + other.mul(-1)
+
+    def __torch_function__(self, func, types, args=(), kwargs=None):
+        if kwargs is None:
+            kwargs = {}
+
+        if not isinstance(args[0], LinearOperator):
+            if func not in HANDLED_SECOND_ARG_FUNCTIONS:
+                raise NotImplementedError
+            return HANDLED_SECOND_ARG_FUNCTIONS[func](args[1], args[0], *args[2:], **kwargs)
+        else:
+            if func not in HANDLED_FUNCTIONS:
+                raise NotImplementedError
+            return HANDLED_FUNCTIONS[func](*args, **kwargs)
 
 
 def to_dense(obj):

@@ -10,6 +10,7 @@ from .linear_operator import LinearOperator, to_dense
 from .non_linear_operator import NonLinearOperator, to_linear_operator
 
 
+# TODO implement this as a __torch_function__
 def cat(inputs, dim=0, output_device=None):
     if all(torch.is_tensor(i) for i in inputs):
         return torch.cat(inputs, dim=dim)
@@ -353,7 +354,7 @@ class CatLinearOperator(LinearOperator):
 
     def inv_quad_logdet(self, inv_quad_rhs=None, logdet=False, reduce_inv_quad=True):
         res = super().inv_quad_logdet(inv_quad_rhs, logdet, reduce_inv_quad)
-        return tuple(r.to(self.device) for r in res)
+        return tuple(r.to(self.device) if r is not None else None for r in res)
 
     @property
     def device(self):

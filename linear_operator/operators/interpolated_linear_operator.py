@@ -389,7 +389,15 @@ class InterpolatedLinearOperator(LinearOperator):
         else:
             return super(InterpolatedLinearOperator, self).diag()
 
-    def matmul(self, tensor):
+    def zero_mean_mvn_samples(self, num_samples):
+        base_samples = self.base_linear_operator.zero_mean_mvn_samples(num_samples)
+        batch_iter = tuple(range(1, base_samples.dim()))
+        base_samples = base_samples.permute(*batch_iter, 0)
+        res = left_interp(self.left_interp_indices, self.left_interp_values, base_samples).contiguous()
+        batch_iter = tuple(range(res.dim() - 1))
+        return res.permute(-1, *batch_iter).contiguous()
+
+    def __matmul__(self, tensor):
         # We're using a custom matmul here, because it is significantly faster than
         # what we get from the function factory.
         # The _matmul_closure is optimized for repeated calls, such as for inv_matmul
@@ -414,11 +422,3 @@ class InterpolatedLinearOperator(LinearOperator):
         if is_vector:
             res = res.squeeze(-1)
         return res
-
-    def zero_mean_mvn_samples(self, num_samples):
-        base_samples = self.base_linear_operator.zero_mean_mvn_samples(num_samples)
-        batch_iter = tuple(range(1, base_samples.dim()))
-        base_samples = base_samples.permute(*batch_iter, 0)
-        res = left_interp(self.left_interp_indices, self.left_interp_values, base_samples).contiguous()
-        batch_iter = tuple(range(res.dim() - 1))
-        return res.permute(-1, *batch_iter).contiguous()

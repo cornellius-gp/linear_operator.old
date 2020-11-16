@@ -24,7 +24,7 @@ class NonLinearOperator(LinearOperator):
         super(NonLinearOperator, self).__init__(tsr)
         self.tensor = tsr
 
-    def _cholesky_solve(self, rhs, upper=False):
+    def _cholesky_solve(self, rhs, upper: bool = False):
         return torch.cholesky_solve(rhs, self.evaluate(), upper=upper)
 
     def _expand_batch(self, batch_shape):

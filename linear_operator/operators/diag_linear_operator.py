@@ -36,7 +36,7 @@ class DiagLinearOperator(TriangularLinearOperator):
     def _cholesky(self, upper=False):
         return self.sqrt()
 
-    def _cholesky_solve(self, rhs):
+    def _cholesky_solve(self, rhs, upper=False):
         return rhs / self._diag.unsqueeze(-1).pow(2)
 
     def _expand_batch(self, batch_shape):
