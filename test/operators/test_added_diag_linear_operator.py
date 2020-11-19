@@ -4,7 +4,12 @@ import unittest
 
 import torch
 
-from linear_operator.operators import AddedDiagLinearOperator, DiagLinearOperator, NonLinearOperator, RootLinearOperator
+from linear_operator.operators import (
+    AddedDiagLinearOperator,
+    DenseLinearOperator,
+    DiagLinearOperator,
+    RootLinearOperator,
+)
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
@@ -16,7 +21,7 @@ class TestAddedDiagLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         tensor = torch.randn(5, 5)
         tensor = tensor.transpose(-1, -2).matmul(tensor).detach()
         diag = torch.tensor([1.0, 2.0, 4.0, 2.0, 3.0], requires_grad=True)
-        return AddedDiagLinearOperator(NonLinearOperator(tensor), DiagLinearOperator(diag))
+        return AddedDiagLinearOperator(DenseLinearOperator(tensor), DiagLinearOperator(diag))
 
     def evaluate_linear_operator(self, linear_operator):
         diag = linear_operator._diag_tensor._diag
@@ -34,7 +39,7 @@ class TestAddedDiagLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase
         diag = torch.tensor(
             [[1.0, 2.0, 4.0, 2.0, 3.0], [2.0, 1.0, 2.0, 1.0, 4.0], [1.0, 2.0, 2.0, 3.0, 4.0]], requires_grad=True
         )
-        return AddedDiagLinearOperator(NonLinearOperator(tensor), DiagLinearOperator(diag))
+        return AddedDiagLinearOperator(DenseLinearOperator(tensor), DiagLinearOperator(diag))
 
     def evaluate_linear_operator(self, linear_operator):
         diag = linear_operator._diag_tensor._diag
@@ -58,7 +63,7 @@ class TestAddedDiagLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.Tes
             .repeat(4, 1, 1)
             .detach()
         )
-        return AddedDiagLinearOperator(NonLinearOperator(tensor), DiagLinearOperator(diag))
+        return AddedDiagLinearOperator(DenseLinearOperator(tensor), DiagLinearOperator(diag))
 
     def evaluate_linear_operator(self, linear_operator):
         diag = linear_operator._diag_tensor._diag

@@ -5,8 +5,8 @@ from abc import abstractmethod
 import torch
 
 from ..utils.getitem import _is_noop_index, _noop_index
+from .dense_linear_operator import to_linear_operator
 from .linear_operator import LinearOperator
-from .non_linear_operator import to_linear_operator
 
 
 class BlockLinearOperator(LinearOperator):

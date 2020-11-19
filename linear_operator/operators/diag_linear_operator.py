@@ -7,8 +7,8 @@ from torch import Tensor
 
 from ..utils.broadcasting import _mul_broadcast_shape
 from ..utils.memoize import cached
+from .dense_linear_operator import DenseLinearOperator
 from .linear_operator import LinearOperator
-from .non_linear_operator import NonLinearOperator
 from .triangular_linear_operator import TriangularLinearOperator
 
 
@@ -54,9 +54,9 @@ class DiagLinearOperator(TriangularLinearOperator):
         # multiply element-wise with the diagonal (using proper broadcasting)
         if rhs.ndimension() == 1:
             return self._diag * rhs
-        # special case if we have a NonLinearOperator
-        if isinstance(rhs, NonLinearOperator):
-            return NonLinearOperator(self._diag.unsqueeze(-1) * rhs.tensor)
+        # special case if we have a DenseLinearOperator
+        if isinstance(rhs, DenseLinearOperator):
+            return DenseLinearOperator(self._diag.unsqueeze(-1) * rhs.tensor)
         return self._diag.unsqueeze(-1) * rhs
 
     def _mul_constant(self, constant):
@@ -161,9 +161,9 @@ class DiagLinearOperator(TriangularLinearOperator):
         # this is trivial if we multiply two DiagLinearOperators
         if isinstance(other, DiagLinearOperator):
             return DiagLinearOperator(self._diag * other._diag)
-        # special case if we have a NonLinearOperator
-        if isinstance(other, NonLinearOperator):
-            return NonLinearOperator(self._diag.unsqueeze(-1) * other.tensor)
+        # special case if we have a DenseLinearOperator
+        if isinstance(other, DenseLinearOperator):
+            return DenseLinearOperator(self._diag.unsqueeze(-1) * other.tensor)
         # and if we have a triangular one
         if isinstance(other, TriangularLinearOperator):
             return TriangularLinearOperator(self._diag.unsqueeze(-1) * other._tensor, upper=other.upper)

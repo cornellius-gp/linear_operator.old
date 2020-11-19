@@ -5,12 +5,12 @@ import torch
 from .linear_operator import LinearOperator
 
 
-class NonLinearOperator(LinearOperator):
+class DenseLinearOperator(LinearOperator):
     def _check_args(self, tsr):
         if not torch.is_tensor(tsr):
-            return "NonLinearOperator must take a torch.Tensor; got {}".format(tsr.__class__.__name__)
+            return "DenseLinearOperator must take a torch.Tensor; got {}".format(tsr.__class__.__name__)
         if tsr.dim() < 2:
-            return "NonLinearOperator expects a matrix (or batches of matrices) - got a Tensor of size {}.".format(
+            return "DenseLinearOperator expects a matrix (or batches of matrices) - got a Tensor of size {}.".format(
                 tsr.shape
             )
 
@@ -21,7 +21,7 @@ class NonLinearOperator(LinearOperator):
         Args:
         - tsr (Tensor: matrix) a Tensor
         """
-        super(NonLinearOperator, self).__init__(tsr)
+        super(DenseLinearOperator, self).__init__(tsr)
         self.tensor = tsr
 
     def _cholesky_solve(self, rhs, upper: bool = False):
@@ -57,7 +57,7 @@ class NonLinearOperator(LinearOperator):
         return self.__class__(self.tensor.sum(dim))
 
     def _transpose_nonbatch(self):
-        return NonLinearOperator(self.tensor.transpose(-1, -2))
+        return DenseLinearOperator(self.tensor.transpose(-1, -2))
 
     def _t_matmul(self, rhs):
         return torch.matmul(self.tensor.transpose(-1, -2), rhs)
@@ -73,18 +73,18 @@ class NonLinearOperator(LinearOperator):
         return self.tensor
 
     def __add__(self, other):
-        if isinstance(other, NonLinearOperator):
-            return NonLinearOperator(self.tensor + other.tensor)
+        if isinstance(other, DenseLinearOperator):
+            return DenseLinearOperator(self.tensor + other.tensor)
         elif isinstance(other, torch.Tensor):
-            return NonLinearOperator(self.tensor + other)
+            return DenseLinearOperator(self.tensor + other)
         else:
-            return super(NonLinearOperator, self).__add__(other)
+            return super(DenseLinearOperator, self).__add__(other)
 
     def mul(self, other):
-        if isinstance(other, NonLinearOperator):
-            return NonLinearOperator(self.tensor * other.tensor)
+        if isinstance(other, DenseLinearOperator):
+            return DenseLinearOperator(self.tensor * other.tensor)
         else:
-            return super(NonLinearOperator, self).mul(other)
+            return super(DenseLinearOperator, self).mul(other)
 
 
 def to_linear_operator(obj):
@@ -92,15 +92,15 @@ def to_linear_operator(obj):
     A function which ensures that `obj` is a LinearOperator.
 
     If `obj` is a LinearOperator, this function does nothing.
-    If `obj` is a (normal) Tensor, this function wraps it with a `NonLinearOperator`.
+    If `obj` is a (normal) Tensor, this function wraps it with a `DenseLinearOperator`.
     """
 
     if torch.is_tensor(obj):
-        return NonLinearOperator(obj)
+        return DenseLinearOperator(obj)
     elif isinstance(obj, LinearOperator):
         return obj
     else:
         raise TypeError("object of class {} cannot be made into a LinearOperator".format(obj.__class__.__name__))
 
 
-__all__ = ["NonLinearOperator", "to_linear_operator"]
+__all__ = ["DenseLinearOperator", "to_linear_operator"]

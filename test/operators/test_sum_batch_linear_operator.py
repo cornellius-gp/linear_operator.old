@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from linear_operator.operators import NonLinearOperator, SumBatchLinearOperator
+from linear_operator.operators import DenseLinearOperator, SumBatchLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
@@ -16,7 +16,7 @@ class TestSumBatchLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         blocks = torch.randn(12, 4, 4)
         blocks = blocks.transpose(-1, -2).matmul(blocks)
         blocks.requires_grad_(True)
-        return SumBatchLinearOperator(NonLinearOperator(blocks))
+        return SumBatchLinearOperator(DenseLinearOperator(blocks))
 
     def evaluate_linear_operator(self, linear_operator):
         blocks = linear_operator.base_linear_operator.tensor
@@ -31,7 +31,7 @@ class TestSumBatchLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase)
         blocks = torch.randn(2, 6, 4, 4)
         blocks = blocks.transpose(-1, -2).matmul(blocks)
         blocks.requires_grad_(True)
-        return SumBatchLinearOperator(NonLinearOperator(blocks))
+        return SumBatchLinearOperator(DenseLinearOperator(blocks))
 
     def evaluate_linear_operator(self, linear_operator):
         blocks = linear_operator.base_linear_operator.tensor
@@ -48,7 +48,7 @@ class TestSumBatchLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.Test
         blocks = torch.randn(2, 3, 6, 4, 4)
         blocks = blocks.transpose(-1, -2).matmul(blocks)
         blocks.detach_()
-        return SumBatchLinearOperator(NonLinearOperator(blocks), block_dim=1)
+        return SumBatchLinearOperator(DenseLinearOperator(blocks), block_dim=1)
 
     def evaluate_linear_operator(self, linear_operator):
         blocks = linear_operator.base_linear_operator.tensor

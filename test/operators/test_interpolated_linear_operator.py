@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from linear_operator.operators import InterpolatedLinearOperator, NonLinearOperator
+from linear_operator.operators import DenseLinearOperator, InterpolatedLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase, RectangularLinearOperatorTestCase
 
 
@@ -28,7 +28,7 @@ class TestInterpolatedLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         base_tensor = torch.randn(6, 6)
         base_tensor = base_tensor.t().matmul(base_tensor)
         base_tensor.requires_grad = True
-        base_linear_operator = NonLinearOperator(base_tensor)
+        base_linear_operator = DenseLinearOperator(base_tensor)
 
         return InterpolatedLinearOperator(
             base_linear_operator, left_interp_indices, left_interp_values, right_interp_indices, right_interp_values
@@ -65,7 +65,7 @@ class TestInterpolatedLinearOperatorBatch(LinearOperatorTestCase, unittest.TestC
         base_tensor = torch.randn(5, 6, 6)
         base_tensor = base_tensor.transpose(-2, -1).matmul(base_tensor)
         base_tensor.requires_grad = True
-        base_linear_operator = NonLinearOperator(base_tensor)
+        base_linear_operator = DenseLinearOperator(base_tensor)
 
         return InterpolatedLinearOperator(
             base_linear_operator, left_interp_indices, left_interp_values, right_interp_indices, right_interp_values
@@ -112,7 +112,7 @@ class TestInterpolatedLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.
 
         base_tensor = torch.randn(5, 6, 6)
         base_tensor = base_tensor.transpose(-2, -1).matmul(base_tensor)
-        base_linear_operator = NonLinearOperator(base_tensor)
+        base_linear_operator = DenseLinearOperator(base_tensor)
 
         return InterpolatedLinearOperator(
             base_linear_operator, left_interp_indices, left_interp_values, right_interp_indices, right_interp_values
@@ -149,7 +149,7 @@ def empty_method(self):
 
 class TestInterpolatedLinearOperatorRectangular(RectangularLinearOperatorTestCase, unittest.TestCase):
     def create_linear_operator(self):
-        itplzt = InterpolatedLinearOperator(NonLinearOperator(torch.rand(3, 4)))
+        itplzt = InterpolatedLinearOperator(DenseLinearOperator(torch.rand(3, 4)))
         return itplzt
 
     def evaluate_linear_operator(self, linear_operator):

@@ -9,6 +9,7 @@ from .cached_cg_linear_operator import CachedCGLinearOperator
 from .cat_linear_operator import CatLinearOperator, cat
 from .chol_linear_operator import CholLinearOperator
 from .constant_mul_linear_operator import ConstantMulLinearOperator
+from .dense_linear_operator import DenseLinearOperator, to_linear_operator
 from .diag_linear_operator import ConstantDiagLinearOperator, DiagLinearOperator
 from .interpolated_linear_operator import InterpolatedLinearOperator
 from .keops_linear_operator import KeOpsLinearOperator
@@ -17,7 +18,6 @@ from .kronecker_product_linear_operator import KroneckerProductLinearOperator, K
 from .linear_operator import LinearOperator, to_dense
 from .matmul_linear_operator import MatmulLinearOperator
 from .mul_linear_operator import MulLinearOperator
-from .non_linear_operator import NonLinearOperator, to_linear_operator
 from .psd_sum_linear_operator import PsdSumLinearOperator
 from .root_linear_operator import RootLinearOperator
 from .sum_batch_linear_operator import SumBatchLinearOperator
@@ -49,7 +49,7 @@ __all__ = [
     "KroneckerProductTriangularLinearOperator",
     "MatmulLinearOperator",
     "MulLinearOperator",
-    "NonLinearOperator",
+    "DenseLinearOperator",
     "PsdSumLinearOperator",
     "RootLinearOperator",
     "SumLinearOperator",

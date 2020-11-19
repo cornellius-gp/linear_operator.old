@@ -9,8 +9,8 @@ from ..utils.broadcasting import _mul_broadcast_shape
 from ..utils.errors import NotPSDError
 from ..utils.memoize import cached
 from .batch_repeat_linear_operator import BatchRepeatLinearOperator
+from .dense_linear_operator import DenseLinearOperator
 from .linear_operator import LinearOperator
-from .non_linear_operator import NonLinearOperator
 
 Allsor = Union[Tensor, LinearOperator]
 
@@ -38,7 +38,7 @@ class TriangularLinearOperator(LinearOperator):
                     batch_repeat=tensor.batch_repeat,
                 )
         if torch.is_tensor(tensor):
-            tensor = NonLinearOperator(tensor)
+            tensor = DenseLinearOperator(tensor)
         super().__init__(tensor)
         self.upper = upper
         self._tensor = tensor
@@ -121,7 +121,7 @@ class TriangularLinearOperator(LinearOperator):
         return TriangularLinearOperator(self._tensor.exp(), upper=self.upper)
 
     def inv_matmul(self, right_tensor: Tensor, left_tensor: Optional[Tensor] = None) -> Tensor:
-        if isinstance(self._tensor, NonLinearOperator):
+        if isinstance(self._tensor, DenseLinearOperator):
             res = torch.triangular_solve(right_tensor, self.evaluate(), upper=self.upper).solution
         elif isinstance(self._tensor, BatchRepeatLinearOperator):
             res = self._tensor.base_linear_operator.inv_matmul(right_tensor, left_tensor)
