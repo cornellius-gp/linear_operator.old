@@ -21,7 +21,7 @@ class InvQuadLogDet(Function):
     @staticmethod
     def forward(
         ctx,
-        representation_tree,
+        linear_op,
         dtype,
         device,
         matrix_shape,
@@ -45,7 +45,7 @@ class InvQuadLogDet(Function):
         if not (inv_quad or logdet):
             raise RuntimeError("Either inv_quad or logdet must be true (or both)")
 
-        ctx.representation_tree = representation_tree
+        ctx.representation_tree = linear_op.representation_tree()
         ctx.dtype = dtype
         ctx.device = device
         ctx.matrix_shape = matrix_shape
@@ -61,8 +61,6 @@ class InvQuadLogDet(Function):
         else:
             matrix_args = args
 
-        # Get closure for matmul
-        linear_op = ctx.representation_tree(*matrix_args)
         with torch.no_grad():
             preconditioner, precond_lt, logdet_correction = linear_op._preconditioner()
 

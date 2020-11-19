@@ -24,7 +24,7 @@ class InvQuad(Function):
     """
 
     @staticmethod
-    def forward(ctx, representation_tree, *args):
+    def forward(ctx, linear_op, *args):
         """
         *args - The arguments representing the PSD matrix A (or batch of PSD matrices A)
         If inv_quad is true, the first entry in *args is inv_quad_rhs (Tensor)
@@ -35,9 +35,7 @@ class InvQuad(Function):
         - (Scalar) The log determinant (or None, if logdet is False)
         """
         inv_quad_rhs, *matrix_args = args
-        ctx.representation_tree = representation_tree
-        # Get closure for matmul
-        linear_op = ctx.representation_tree(*matrix_args)
+        ctx.representation_tree = linear_op.representation_tree()
 
         # RHS for inv_quad
         ctx.is_vector = False

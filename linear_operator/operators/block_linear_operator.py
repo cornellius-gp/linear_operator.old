@@ -49,7 +49,8 @@ class BlockLinearOperator(LinearOperator):
                 positive_block_dim,
             )
 
-        super(BlockLinearOperator, self).__init__(to_linear_operator(base_linear_operator))
+        base_linear_operator = to_linear_operator(base_linear_operator)
+        super(BlockLinearOperator, self).__init__(base_linear_operator)
         self.base_linear_operator = base_linear_operator
 
     @abstractmethod

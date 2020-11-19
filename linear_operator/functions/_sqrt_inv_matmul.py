@@ -16,9 +16,9 @@ class SqrtInvMatmul(Function):
     """
 
     @staticmethod
-    def forward(ctx, representation_tree, rhs, lhs, *matrix_args):
-        ctx.representation_tree = representation_tree
-        ctx.linear_op = ctx.representation_tree(*matrix_args)
+    def forward(ctx, linear_op, rhs, lhs, *matrix_args):
+        ctx.representation_tree = linear_op.representation_tree()
+        ctx.linear_op = linear_op
 
         if lhs is not None:
             terms = torch.cat([rhs, lhs.transpose(-1, -2)], dim=-1)
