@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from linear_operator.operators import KroneckerProductLinearOperator, NonLinearOperator
+from linear_operator.operators import DenseLinearOperator, KroneckerProductLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase, RectangularLinearOperatorTestCase
 
 
@@ -29,7 +29,7 @@ class TestKroneckerProductLinearOperator(LinearOperatorTestCase, unittest.TestCa
         b.requires_grad_(True)
         c.requires_grad_(True)
         kp_linear_operator = KroneckerProductLinearOperator(
-            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+            DenseLinearOperator(a), DenseLinearOperator(b), DenseLinearOperator(c)
         )
         return kp_linear_operator
 
@@ -50,7 +50,7 @@ class TestKroneckerProductLinearOperatorBatch(TestKroneckerProductLinearOperator
         b.requires_grad_(True)
         c.requires_grad_(True)
         kp_linear_operator = KroneckerProductLinearOperator(
-            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+            DenseLinearOperator(a), DenseLinearOperator(b), DenseLinearOperator(c)
         )
         return kp_linear_operator
 
@@ -63,7 +63,7 @@ class TestKroneckerProductLinearOperatorRectangular(RectangularLinearOperatorTes
         b = torch.randn(5, 2, requires_grad=True)
         c = torch.randn(6, 4, requires_grad=True)
         kp_linear_operator = KroneckerProductLinearOperator(
-            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+            DenseLinearOperator(a), DenseLinearOperator(b), DenseLinearOperator(c)
         )
         return kp_linear_operator
 
@@ -81,7 +81,7 @@ class TestKroneckerProductLinearOperatorRectangularMultiBatch(TestKroneckerProdu
         b = torch.randn(3, 4, 5, 2, requires_grad=True)
         c = torch.randn(3, 4, 6, 4, requires_grad=True)
         kp_linear_operator = KroneckerProductLinearOperator(
-            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+            DenseLinearOperator(a), DenseLinearOperator(b), DenseLinearOperator(c)
         )
         return kp_linear_operator
 

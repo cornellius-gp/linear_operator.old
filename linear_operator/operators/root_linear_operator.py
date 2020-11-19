@@ -5,9 +5,9 @@ import torch
 from ..utils.broadcasting import _pad_with_singletons
 from ..utils.getitem import _equal_indices, _noop_index
 from ..utils.memoize import cached
+from .dense_linear_operator import DenseLinearOperator, to_linear_operator
 from .linear_operator import LinearOperator
 from .matmul_linear_operator import MatmulLinearOperator
-from .non_linear_operator import NonLinearOperator, to_linear_operator
 
 
 class RootLinearOperator(LinearOperator):
@@ -75,7 +75,7 @@ class RootLinearOperator(LinearOperator):
         return self
 
     def diag(self):
-        if isinstance(self.root, NonLinearOperator):
+        if isinstance(self.root, DenseLinearOperator):
             return (self.root.tensor ** 2).sum(-1)
         else:
             return super().diag()

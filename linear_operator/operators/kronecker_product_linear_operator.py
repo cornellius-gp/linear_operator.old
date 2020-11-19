@@ -10,9 +10,9 @@ from torch import Tensor
 from .. import settings
 from ..utils.broadcasting import _matmul_broadcast_shape, _mul_broadcast_shape
 from ..utils.memoize import cached
+from .dense_linear_operator import to_linear_operator
 from .diag_linear_operator import ConstantDiagLinearOperator, DiagLinearOperator
 from .linear_operator import LinearOperator
-from .non_linear_operator import to_linear_operator
 from .triangular_linear_operator import TriangularLinearOperator
 
 

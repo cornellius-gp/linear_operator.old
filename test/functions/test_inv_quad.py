@@ -7,7 +7,7 @@ import unittest
 import torch
 
 from linear_operator import settings
-from linear_operator.operators import NonLinearOperator
+from linear_operator.operators import DenseLinearOperator
 
 
 class TestInvQuadNonBatch(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestInvQuadNonBatch(unittest.TestCase):
         # Forward pass
         actual_inv_quad = self.mat_clone.inverse().matmul(self.vec_clone).mul(self.vec_clone).sum()
         with settings.num_trace_samples(1000):
-            non_linear_op = NonLinearOperator(self.mat)
+            non_linear_op = DenseLinearOperator(self.mat)
             res_inv_quad = non_linear_op.inv_quad(self.vec)
 
         self.assertAlmostEqual(res_inv_quad.item(), actual_inv_quad.item(), places=1)
@@ -56,7 +56,7 @@ class TestInvQuadNonBatch(unittest.TestCase):
         # Forward pass
         actual_inv_quad = self.mat_clone.inverse().matmul(self.vecs_clone).mul(self.vecs_clone).sum()
         with settings.num_trace_samples(1000):
-            non_linear_op = NonLinearOperator(self.mat)
+            non_linear_op = DenseLinearOperator(self.mat)
             res_inv_quad = non_linear_op.inv_quad(self.vecs)
         self.assertAlmostEqual(res_inv_quad.item(), actual_inv_quad.item(), places=1)
 
@@ -100,7 +100,7 @@ class TestInvQuadBatch(unittest.TestCase):
             .sum(1)
         )
         with settings.num_trace_samples(2000):
-            non_linear_op = NonLinearOperator(self.mats)
+            non_linear_op = DenseLinearOperator(self.mats)
             res_inv_quad = non_linear_op.inv_quad(self.vecs)
 
         self.assertEqual(res_inv_quad.shape, actual_inv_quad.shape)
@@ -150,7 +150,7 @@ class TestInvQuadMultiBatch(unittest.TestCase):
         )
 
         with settings.num_trace_samples(2000):
-            non_linear_op = NonLinearOperator(self.mats)
+            non_linear_op = DenseLinearOperator(self.mats)
             res_inv_quad = non_linear_op.inv_quad(self.vecs)
 
         self.assertEqual(res_inv_quad.shape, actual_inv_quad.shape)

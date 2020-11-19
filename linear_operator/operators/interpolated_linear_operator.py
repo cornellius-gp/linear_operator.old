@@ -6,8 +6,8 @@ from ..utils import sparse
 from ..utils.broadcasting import _pad_with_singletons
 from ..utils.getitem import _noop_index
 from ..utils.interpolation import left_interp, left_t_interp
+from .dense_linear_operator import DenseLinearOperator, to_linear_operator
 from .linear_operator import LinearOperator
-from .non_linear_operator import NonLinearOperator, to_linear_operator
 from .root_linear_operator import RootLinearOperator
 
 
@@ -377,7 +377,7 @@ class InterpolatedLinearOperator(LinearOperator):
 
     def diag(self):
         if isinstance(self.base_linear_operator, RootLinearOperator) and isinstance(
-            self.base_linear_operator.root, NonLinearOperator
+            self.base_linear_operator.root, DenseLinearOperator
         ):
             left_interp_vals = left_interp(
                 self.left_interp_indices, self.left_interp_values, self.base_linear_operator.root.evaluate()

@@ -10,5 +10,5 @@ TODO
 
 .. autofunction:: linear_operator.to_dense
 
-.. autoclass:: linear_operator.operators.NonLinearOperator
+.. autoclass:: linear_operator.operators.DenseLinearOperator
    :members:

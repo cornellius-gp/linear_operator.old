@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from linear_operator.operators import BlockInterleavedLinearOperator, NonLinearOperator
+from linear_operator.operators import BlockInterleavedLinearOperator, DenseLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
@@ -16,7 +16,7 @@ class TestBlockInterleavedLinearOperator(LinearOperatorTestCase, unittest.TestCa
         blocks = torch.randn(8, 4, 4)
         blocks = blocks.matmul(blocks.transpose(-1, -2))
         blocks.add_(torch.eye(4, 4).unsqueeze_(0))
-        return BlockInterleavedLinearOperator(NonLinearOperator(blocks))
+        return BlockInterleavedLinearOperator(DenseLinearOperator(blocks))
 
     def evaluate_linear_operator(self, linear_operator):
         blocks = linear_operator.base_linear_operator.tensor
@@ -36,7 +36,7 @@ class TestBlockInterleavedLinearOperatorBatch(LinearOperatorTestCase, unittest.T
         blocks = torch.randn(2, 6, 4, 4)
         blocks = blocks.matmul(blocks.transpose(-1, -2))
         blocks.add_(torch.eye(4, 4))
-        return BlockInterleavedLinearOperator(NonLinearOperator(blocks), block_dim=2)
+        return BlockInterleavedLinearOperator(DenseLinearOperator(blocks), block_dim=2)
 
     def evaluate_linear_operator(self, linear_operator):
         blocks = linear_operator.base_linear_operator.tensor
@@ -60,7 +60,7 @@ class TestBlockInterleavedLinearOperatorMultiBatch(LinearOperatorTestCase, unitt
         blocks = blocks.matmul(blocks.transpose(-1, -2))
         blocks.add_(torch.eye(4, 4))
         blocks.detach_()
-        return BlockInterleavedLinearOperator(NonLinearOperator(blocks), block_dim=1)
+        return BlockInterleavedLinearOperator(DenseLinearOperator(blocks), block_dim=1)
 
     def evaluate_linear_operator(self, linear_operator):
         blocks = linear_operator.base_linear_operator.tensor

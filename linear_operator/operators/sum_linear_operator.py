@@ -3,8 +3,8 @@ from torch import Tensor
 
 from ..utils.broadcasting import _mul_broadcast_shape
 from ..utils.memoize import cached
+from .dense_linear_operator import to_linear_operator
 from .linear_operator import LinearOperator
-from .non_linear_operator import to_linear_operator
 from .zero_linear_operator import ZeroLinearOperator
 
 # from .broadcasted_linear_operator import BroadcastedLinearOperator

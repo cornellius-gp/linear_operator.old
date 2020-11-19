@@ -465,11 +465,11 @@ class LinearOperator(ABC):
         Returns:
             :obj:`LinearOperator`
         """
-        from .non_linear_operator import NonLinearOperator
+        from .dense_linear_operator import DenseLinearOperator
         from .mul_linear_operator import MulLinearOperator
 
-        if isinstance(self, NonLinearOperator) or isinstance(other, NonLinearOperator):
-            return NonLinearOperator(self.evaluate() * other.evaluate())
+        if isinstance(self, DenseLinearOperator) or isinstance(other, DenseLinearOperator):
+            return DenseLinearOperator(self.evaluate() * other.evaluate())
         else:
             left_linear_operator = self if self._root_decomposition_size() < other._root_decomposition_size() else other
             right_linear_operator = other if left_linear_operator is self else self
@@ -652,7 +652,7 @@ class LinearOperator(ABC):
 
     def _symeig(self, eigenvectors: bool = False) -> Tuple[torch.Tensor, Optional["LinearOperator"]]:
         """Method that allows implementing special-cased symeig computation. Should not be called directly"""
-        from .non_linear_operator import NonLinearOperator
+        from .dense_linear_operator import DenseLinearOperator
 
         dtype = self.dtype  # perform decomposition in double precision for numerical stability
         # TODO: Use fp64 registry once #1213 is addressed
@@ -660,7 +660,7 @@ class LinearOperator(ABC):
         # chop any negative eigenvalues. TODO: warn if evals are significantly negative
         evals = evals.clamp_min(0.0).to(dtype=dtype)
         if eigenvectors:
-            evecs = NonLinearOperator(evecs.to(dtype=dtype))
+            evecs = DenseLinearOperator(evecs.to(dtype=dtype))
         else:
             evecs = None
         return evals, evecs
@@ -1256,7 +1256,7 @@ class LinearOperator(ABC):
 
         Example:
 
-            >>> linear_operator = NonLinearOperator(torch.tensor([
+            >>> linear_operator = DenseLinearOperator(torch.tensor([
                     [[2, 4], [1, 2]],
                     [[1, 1], [2., -1]],
                     [[2, 1], [1, 1.]],
@@ -1439,7 +1439,7 @@ class LinearOperator(ABC):
         :return: A tensor :math:`\mathbf R` such that :math:`\mathbf R \mathbf R^\top \approx \mathbf A^{-1}`.
         """
         from .root_linear_operator import RootLinearOperator
-        from .non_linear_operator import to_linear_operator
+        from .dense_linear_operator import to_linear_operator
 
         if self.shape[-2:].numel() == 1:
             return RootLinearOperator(1 / self.evaluate().sqrt())
@@ -1634,7 +1634,7 @@ class LinearOperator(ABC):
 
         Example:
 
-            >>> linear_operator = NonLinearOperator(torch.tensor([
+            >>> linear_operator = DenseLinearOperator(torch.tensor([
                     [[2, 4], [1, 2]],
                     [[1, 1], [0, -1]],
                     [[2, 1], [1, 0]],
@@ -1749,7 +1749,7 @@ class LinearOperator(ABC):
 
         Example:
 
-            >>> linear_operator = NonLinearOperator(torch.randn(3, 5))
+            >>> linear_operator = DenseLinearOperator(torch.randn(3, 5))
             >>> linear_operator.transpose(0, 1)
         """
         ndimension = self.ndimension()
@@ -1845,7 +1845,7 @@ class LinearOperator(ABC):
         from .zero_linear_operator import ZeroLinearOperator
         from .diag_linear_operator import DiagLinearOperator
         from .added_diag_linear_operator import AddedDiagLinearOperator
-        from .non_linear_operator import to_linear_operator
+        from .dense_linear_operator import to_linear_operator
         from torch import Tensor
 
         if isinstance(other, ZeroLinearOperator):
@@ -1965,7 +1965,7 @@ class LinearOperator(ABC):
 
     def __mul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         from .zero_linear_operator import ZeroLinearOperator
-        from .non_linear_operator import to_linear_operator
+        from .dense_linear_operator import to_linear_operator
 
         if isinstance(other, ZeroLinearOperator):
             return other

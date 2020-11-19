@@ -5,18 +5,18 @@ import unittest
 import torch
 
 from linear_operator import settings
-from linear_operator.operators import NonLinearOperator
+from linear_operator.operators import DenseLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
-class TestNonLinearOperator(LinearOperatorTestCase, unittest.TestCase):
+class TestDenseLinearOperator(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
 
     def create_linear_operator(self):
         mat = torch.randn(5, 6)
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
-        return NonLinearOperator(mat)
+        return DenseLinearOperator(mat)
 
     def evaluate_linear_operator(self, linear_operator):
         return linear_operator.tensor
@@ -31,14 +31,14 @@ class TestNonLinearOperator(LinearOperatorTestCase, unittest.TestCase):
             self.assertLess(torch.norm(res - actual) / actual.norm(), 0.1)
 
 
-class TestNonLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
+class TestDenseLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
 
     def create_linear_operator(self):
         mat = torch.randn(3, 5, 6)
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
-        return NonLinearOperator(mat)
+        return DenseLinearOperator(mat)
 
     def evaluate_linear_operator(self, linear_operator):
         return linear_operator.tensor
@@ -53,7 +53,7 @@ class TestNonLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
             self.assertLess(torch.norm(res - actual) / actual.norm(), 0.1)
 
 
-class TestNonLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase):
+class TestDenseLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase):
     seed = 0
     # Because these LTs are large, we'll skil the big tests
     should_test_sample = False
@@ -63,7 +63,7 @@ class TestNonLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase)
         mat = torch.randn(2, 3, 5, 6)
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
-        return NonLinearOperator(mat)
+        return DenseLinearOperator(mat)
 
     def evaluate_linear_operator(self, linear_operator):
         return linear_operator.tensor

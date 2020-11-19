@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from linear_operator.operators import CatLinearOperator, NonLinearOperator
+from linear_operator.operators import CatLinearOperator, DenseLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
 
@@ -19,9 +19,9 @@ class TestCatLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[2:4, :].requires_grad_()
         slice3_mat = self.psd_mat[4:6, :].requires_grad_()
 
-        slice1 = NonLinearOperator(slice1_mat)
-        slice2 = NonLinearOperator(slice2_mat)
-        slice3 = NonLinearOperator(slice3_mat)
+        slice1 = DenseLinearOperator(slice1_mat)
+        slice2 = DenseLinearOperator(slice2_mat)
+        slice3 = DenseLinearOperator(slice3_mat)
 
         return CatLinearOperator(slice1, slice2, slice3, dim=-2)
 
@@ -40,9 +40,9 @@ class TestCatLinearOperatorColumn(LinearOperatorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[:, 2:4].requires_grad_()
         slice3_mat = self.psd_mat[:, 4:6].requires_grad_()
 
-        slice1 = NonLinearOperator(slice1_mat)
-        slice2 = NonLinearOperator(slice2_mat)
-        slice3 = NonLinearOperator(slice3_mat)
+        slice1 = DenseLinearOperator(slice1_mat)
+        slice2 = DenseLinearOperator(slice2_mat)
+        slice3 = DenseLinearOperator(slice3_mat)
 
         return CatLinearOperator(slice1, slice2, slice3, dim=-1)
 
@@ -61,9 +61,9 @@ class TestCatLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[..., 2:4, :].requires_grad_()
         slice3_mat = self.psd_mat[..., 4:6, :].requires_grad_()
 
-        slice1 = NonLinearOperator(slice1_mat)
-        slice2 = NonLinearOperator(slice2_mat)
-        slice3 = NonLinearOperator(slice3_mat)
+        slice1 = DenseLinearOperator(slice1_mat)
+        slice2 = DenseLinearOperator(slice2_mat)
+        slice3 = DenseLinearOperator(slice3_mat)
 
         return CatLinearOperator(slice1, slice2, slice3, dim=-2)
 
@@ -84,9 +84,9 @@ class TestCatLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase)
         slice2_mat = self.psd_mat[..., 2:4, :].requires_grad_()
         slice3_mat = self.psd_mat[..., 4:6, :].requires_grad_()
 
-        slice1 = NonLinearOperator(slice1_mat)
-        slice2 = NonLinearOperator(slice2_mat)
-        slice3 = NonLinearOperator(slice3_mat)
+        slice1 = DenseLinearOperator(slice1_mat)
+        slice2 = DenseLinearOperator(slice2_mat)
+        slice3 = DenseLinearOperator(slice3_mat)
 
         return CatLinearOperator(slice1, slice2, slice3, dim=-2)
 
@@ -107,9 +107,9 @@ class TestCatLinearOperatorBatchCat(LinearOperatorTestCase, unittest.TestCase):
         slice2_mat = self.psd_mat[2:3, ...].requires_grad_()
         slice3_mat = self.psd_mat[3:, ...].requires_grad_()
 
-        slice1 = NonLinearOperator(slice1_mat)
-        slice2 = NonLinearOperator(slice2_mat)
-        slice3 = NonLinearOperator(slice3_mat)
+        slice1 = DenseLinearOperator(slice1_mat)
+        slice2 = DenseLinearOperator(slice2_mat)
+        slice3 = DenseLinearOperator(slice3_mat)
 
         return CatLinearOperator(slice1, slice2, slice3, dim=0)
 

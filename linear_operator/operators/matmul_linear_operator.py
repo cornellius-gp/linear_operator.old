@@ -5,9 +5,9 @@ import torch
 from ..utils.broadcasting import _matmul_broadcast_shape, _mul_broadcast_shape, _pad_with_singletons
 from ..utils.getitem import _noop_index
 from ..utils.memoize import cached
+from .dense_linear_operator import DenseLinearOperator, to_linear_operator
 from .diag_linear_operator import DiagLinearOperator
 from .linear_operator import LinearOperator
-from .non_linear_operator import NonLinearOperator, to_linear_operator
 
 
 def _inner_repeat(tensor, amt):
@@ -110,8 +110,8 @@ class MatmulLinearOperator(LinearOperator):
         )
 
     def diag(self):
-        if isinstance(self.left_linear_operator, NonLinearOperator) and isinstance(
-            self.right_linear_operator, NonLinearOperator
+        if isinstance(self.left_linear_operator, DenseLinearOperator) and isinstance(
+            self.right_linear_operator, DenseLinearOperator
         ):
             return (self.left_linear_operator.tensor * self.right_linear_operator.tensor.transpose(-1, -2)).sum(-1)
         elif isinstance(self.left_linear_operator, DiagLinearOperator) or isinstance(

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import torch
 
 from linear_operator import settings, utils
-from linear_operator.operators import CachedCGLinearOperator, NonLinearOperator
+from linear_operator.operators import CachedCGLinearOperator, DenseLinearOperator
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase, _ensure_symmetric_grad
 from linear_operator.utils.warnings import ExtraComputationWarning
 
@@ -21,7 +21,7 @@ class TestCachedCGLinearOperatorNoLogdet(LinearOperatorTestCase, unittest.TestCa
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
 
-        linear_operator = NonLinearOperator(mat)
+        linear_operator = DenseLinearOperator(mat)
         eager_rhs = torch.randn(5, 10).detach()
         if with_solves:
             with settings.num_trace_samples(1000 if with_logdet else 1):  # For inv_quad_logdet tests
@@ -223,7 +223,7 @@ class TestCachedCGLinearOperatorNoLogdetBatch(TestCachedCGLinearOperatorNoLogdet
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
 
-        linear_operator = NonLinearOperator(mat)
+        linear_operator = DenseLinearOperator(mat)
         eager_rhs = torch.randn(3, 5, 10).detach()
         if with_solves:
             with settings.num_trace_samples(1000 if with_logdet else 1):  # For inv_quad_logdet tests
@@ -253,7 +253,7 @@ class TestCachedCGLinearOperatorBatch(TestCachedCGLinearOperator):
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
 
-        linear_operator = NonLinearOperator(mat)
+        linear_operator = DenseLinearOperator(mat)
         eager_rhs = torch.randn(3, 5, 10).detach()
         if with_solves:
             with settings.num_trace_samples(1000 if with_logdet else 1):  # For inv_quad_logdet tests
@@ -286,7 +286,7 @@ class TestCachedCGLinearOperatorMultiBatch(TestCachedCGLinearOperator):
         mat = mat.matmul(mat.transpose(-1, -2))
         mat.requires_grad_(True)
 
-        linear_operator = NonLinearOperator(mat)
+        linear_operator = DenseLinearOperator(mat)
         eager_rhs = torch.randn(2, 3, 5, 10).detach()
         if with_solves:
             with settings.num_trace_samples(1000 if with_logdet else 1):  # For inv_quad_logdet tests

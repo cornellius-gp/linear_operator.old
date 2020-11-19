@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from linear_operator.operators import NonLinearOperator
+from linear_operator.operators import DenseLinearOperator
 from linear_operator.test.base_test_case import BaseTestCase
 
 
@@ -22,7 +22,7 @@ class TestRootDecomposition(BaseTestCase, unittest.TestCase):
         mat_clone = mat.detach().clone().requires_grad_(True)
 
         # Forward
-        root = NonLinearOperator(mat).root_decomposition().root.evaluate()
+        root = DenseLinearOperator(mat).root_decomposition().root.evaluate()
         res = root.matmul(root.transpose(-1, -2))
         self.assertAllClose(res, mat)
 
@@ -38,7 +38,7 @@ class TestRootDecomposition(BaseTestCase, unittest.TestCase):
         # Forward
         probe_vectors = torch.randn(*mat.shape[:-2], 4, 5)
         test_vectors = torch.randn(*mat.shape[:-2], 4, 5)
-        root = NonLinearOperator(mat).root_inv_decomposition(probe_vectors, test_vectors).root.evaluate()
+        root = DenseLinearOperator(mat).root_inv_decomposition(probe_vectors, test_vectors).root.evaluate()
         res = root.matmul(root.transpose(-1, -2))
         actual = mat_clone.inverse()
         self.assertAllClose(res, actual)

@@ -7,10 +7,10 @@ import torch
 
 from linear_operator import settings
 from linear_operator.operators import (
+    DenseLinearOperator,
     DiagLinearOperator,
     KroneckerProductAddedDiagLinearOperator,
     KroneckerProductLinearOperator,
-    NonLinearOperator,
 )
 from linear_operator.test.linear_operator_test_case import LinearOperatorTestCase
 
@@ -29,7 +29,7 @@ class TestKroneckerProductAddedDiagLinearOperator(unittest.TestCase, LinearOpera
         b.requires_grad_(True)
         c.requires_grad_(True)
         kp_linear_operator = KroneckerProductLinearOperator(
-            NonLinearOperator(a), NonLinearOperator(b), NonLinearOperator(c)
+            DenseLinearOperator(a), DenseLinearOperator(b), DenseLinearOperator(c)
         )
 
         return KroneckerProductAddedDiagLinearOperator(
