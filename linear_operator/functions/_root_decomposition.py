@@ -11,7 +11,7 @@ class RootDecomposition(Function):
     @staticmethod
     def forward(
         ctx,
-        representation_tree,
+        linear_op,
         max_iter,
         dtype,
         device,
@@ -31,7 +31,7 @@ class RootDecomposition(Function):
         """
         from ..operators import to_linear_operator
 
-        ctx.representation_tree = representation_tree
+        ctx.representation_tree = linear_op.representation_tree()
         ctx.device = device
         ctx.dtype = dtype
         ctx.matrix_shape = matrix_shape
@@ -42,7 +42,6 @@ class RootDecomposition(Function):
         ctx.initial_vectors = initial_vectors
 
         # Get closure for matmul
-        linear_op = ctx.representation_tree(*matrix_args)
         matmul_closure = linear_op._matmul
         # Do lanczos
         q_mat, t_mat = lanczos.lanczos_tridiag(

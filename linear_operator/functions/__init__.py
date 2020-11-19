@@ -55,7 +55,7 @@ def dsmm(sparse_mat, dense_mat):
     Returns:
         - matrix (b x)mxo - Result
     """
-    return DSMM().apply(sparse_mat, dense_mat)
+    return DSMM.apply(sparse_mat, dense_mat)
 
 
 def matmul(mat, rhs):

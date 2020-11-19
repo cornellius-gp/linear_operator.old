@@ -555,9 +555,8 @@ class LinearOperator(ABC):
         Returns:
             (Tensor or LinearOperator): The root of the root decomposition
         """
-        func = RootDecomposition()
-        res, _ = func.apply(
-            self.representation_tree(),
+        res, _ = RootDecomposition.apply(
+            self,
             self._root_decomposition_size(),
             self.dtype,
             self.device,
@@ -593,9 +592,8 @@ class LinearOperator(ABC):
         """
         from .root_linear_operator import RootLinearOperator
 
-        func = RootDecomposition()
-        roots, inv_roots = func.apply(
-            self.representation_tree(),
+        roots, inv_roots = RootDecomposition.apply(
+            self,
             self._root_decomposition_size(),
             self.dtype,
             self.device,
@@ -1025,11 +1023,10 @@ class LinearOperator(ABC):
                     )
                 )
 
-        func = InvMatmul
         if left_tensor is None:
-            return func.apply(self.representation_tree(), False, right_tensor, *self.representation())
+            return InvMatmul.apply(self, False, right_tensor, *self.representation())
         else:
-            return func.apply(self.representation_tree(), True, left_tensor, right_tensor, *self.representation())
+            return InvMatmul.apply(self, True, left_tensor, right_tensor, *self.representation())
 
     def inv_quad(self, tensor, reduce_inv_quad=True) -> torch.Tensor:
         r"""
@@ -1059,8 +1056,7 @@ class LinearOperator(ABC):
             )
 
         args = (tensor.expand(*result_shape[:-2], *tensor.shape[-2:]),) + self.representation()
-        func = InvQuad.apply
-        inv_quad_term = func(self.representation_tree(), *args)
+        inv_quad_term = InvQuad.apply(self, *args)
 
         if reduce_inv_quad:
             inv_quad_term = inv_quad_term.sum(-1)
@@ -1137,10 +1133,8 @@ class LinearOperator(ABC):
 
         probe_vectors, probe_vector_norms = self._probe_vectors_and_norms()
 
-        func = InvQuadLogDet.apply
-
-        inv_quad_term, logdet_term = func(
-            self.representation_tree(),
+        inv_quad_term, logdet_term = InvQuadLogDet.apply(
+            self,
             self.dtype,
             self.device,
             self.matrix_shape,
@@ -1576,8 +1570,7 @@ class LinearOperator(ABC):
             rhs = rhs.unsqueeze(-1)
             squeeze = True
 
-        func = SqrtInvMatmul()
-        sqrt_inv_matmul_res, inv_quad_res = func.apply(self.representation_tree(), rhs, lhs, *self.representation())
+        sqrt_inv_matmul_res, inv_quad_res = SqrtInvMatmul.apply(self, rhs, lhs, *self.representation())
 
         if squeeze:
             sqrt_inv_matmul_res = sqrt_inv_matmul_res.squeeze(-1)
@@ -1968,8 +1961,7 @@ class LinearOperator(ABC):
 
             return MatmulLinearOperator(self, other)
 
-        func = Matmul()
-        return func.apply(self.representation_tree(), other, *self.representation())
+        return Matmul.apply(self, other, *self.representation())
 
     def __mul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         from .zero_linear_operator import ZeroLinearOperator

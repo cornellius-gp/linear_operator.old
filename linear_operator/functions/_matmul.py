@@ -7,8 +7,8 @@ from .. import settings
 
 class Matmul(Function):
     @staticmethod
-    def forward(ctx, representation_tree, rhs, *matrix_args):
-        ctx.representation_tree = representation_tree
+    def forward(ctx, linear_op, rhs, *matrix_args):
+        ctx.representation_tree = linear_op.representation_tree()
         orig_rhs = rhs
 
         if rhs.ndimension() == 1:
@@ -17,7 +17,6 @@ class Matmul(Function):
         else:
             is_vector = False
 
-        linear_op = ctx.representation_tree(*matrix_args)
         res = linear_op._matmul(rhs)
 
         to_save = [orig_rhs] + list(matrix_args)

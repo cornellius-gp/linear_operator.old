@@ -19,12 +19,12 @@ def _solve(linear_op, rhs):
 
 class InvMatmul(Function):
     @staticmethod
-    def forward(ctx, representation_tree, has_left, *args):
+    def forward(ctx, linear_op, has_left, *args):
         left_tensor = None
         right_tensor = None
         matrix_args = None
 
-        ctx.representation_tree = representation_tree
+        ctx.representation_tree = linear_op.representation_tree()
         ctx.has_left = has_left
 
         if ctx.has_left:
@@ -32,7 +32,6 @@ class InvMatmul(Function):
         else:
             right_tensor, *matrix_args = args
         orig_right_tensor = right_tensor
-        linear_op = ctx.representation_tree(*matrix_args)
 
         ctx.is_vector = False
         if right_tensor.ndimension() == 1:
@@ -90,7 +89,7 @@ class InvMatmul(Function):
 
             if not ctx.has_left:
                 # Compute self^{-1} grad_output
-                left_solves = InvMatmul.apply(ctx.representation_tree, False, grad_output, *matrix_args)
+                left_solves = InvMatmul.apply(linear_op, False, grad_output, *matrix_args)
 
                 if any(ctx.needs_input_grad[3:]):
                     # We call _quad_form_derivative to compute dl/dK
