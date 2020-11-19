@@ -126,13 +126,3 @@ class MulLinearOperator(LinearOperator):
     def _transpose_nonbatch(self):
         # mul.linear_operator only works with symmetric matrices
         return self
-
-    def representation(self):
-        """
-        Returns the Tensors that are used to define the LinearOperator
-        """
-        res = super(MulLinearOperator, self).representation()
-        return res
-
-    def representation_tree(self):
-        return super(MulLinearOperator, self).representation_tree()
