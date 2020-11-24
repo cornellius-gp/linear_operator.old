@@ -1988,6 +1988,9 @@ class LinearOperator(ABC):
 
         return self._mul_matrix(to_linear_operator(other))
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} of dimension {tuple(self.shape)} at {hex(id(self))}"
+
     def __radd__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
         return self + other
 
