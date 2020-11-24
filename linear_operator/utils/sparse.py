@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import torch
 
 from .broadcasting import _matmul_broadcast_shape

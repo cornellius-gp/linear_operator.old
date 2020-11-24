@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from __future__ import annotations
+
 from torch import Tensor
 
 from ..utils.broadcasting import _mul_broadcast_shape

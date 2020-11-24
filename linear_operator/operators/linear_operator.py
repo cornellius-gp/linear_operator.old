@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import functools
 import math
 import warnings
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
 
-import numpy
+import numpy  # noqa F401
 import torch
 
 from .. import settings, utils
@@ -679,7 +681,7 @@ class LinearOperator(ABC):
         return self.transpose(-1, -2)._matmul(rhs)
 
     @implements(torch.add)
-    def add(self, other: Union[torch.Tensor, "LinearOperator"], alpha: float = None) -> "LinearOperator":
+    def add(self, other: Union[torch.Tensor, "LinearOperator"], alpha: float = None) -> LinearOperator:
         r"""
         Each element of the tensor :attr:`other` is multiplied by the scalar :attr:`alpha`
         and added to each element of the :obj:`~linear_operator.operators.LinearOperator`.
@@ -699,7 +701,7 @@ class LinearOperator(ABC):
         else:
             return self + alpha * other
 
-    def add_diag(self, diag: torch.Tensor) -> "LinearOperator":
+    def add_diag(self, diag: torch.Tensor) -> LinearOperator:
         r"""
         Adds an element to the diagonal of the matrix.
 
@@ -731,7 +733,7 @@ class LinearOperator(ABC):
 
         return AddedDiagLinearOperator(self, diag_tensor)
 
-    def add_jitter(self, jitter_val: float = 1e-3) -> "LinearOperator":
+    def add_jitter(self, jitter_val: float = 1e-3) -> LinearOperator:
         r"""
         Adds jitter (i.e., a small diagonal component) to the matrix this
         LinearOperator represents.
@@ -756,7 +758,7 @@ class LinearOperator(ABC):
         return self.shape[:-2]
 
     @implements(torch.cholesky)
-    def cholesky(self, upper: bool = False) -> "LinearOperator":
+    def cholesky(self, upper: bool = False) -> LinearOperator:
         """
         Cholesky-factorizes the LinearOperator.
 
@@ -787,7 +789,7 @@ class LinearOperator(ABC):
         return self._cholesky_solve(rhs, upper=upper)
 
     @implements(torch.clone)
-    def clone(self) -> "LinearOperator":
+    def clone(self) -> LinearOperator:
         """
         Clones the LinearOperator (creates clones of all underlying tensors)
         """
@@ -795,7 +797,7 @@ class LinearOperator(ABC):
         kwargs = {key: val.clone() if hasattr(val, "clone") else val for key, val in self._kwargs.items()}
         return self.__class__(*args, **kwargs)
 
-    def cpu(self) -> "LinearOperator":
+    def cpu(self) -> LinearOperator:
         """
         :return: A new :obj:`~linear_operator.operators.LinearOperator` identical to :attr:`self`, but on the CPU.
         """
@@ -813,7 +815,7 @@ class LinearOperator(ABC):
                 new_kwargs[name] = val
         return self.__class__(*new_args, **new_kwargs)
 
-    def cuda(self, device_id: str = None) -> "LinearOperator":
+    def cuda(self, device_id: str = None) -> LinearOperator:
         """
         This method operates identically to :func:`torch.nn.Module.cuda`.
 
@@ -840,7 +842,7 @@ class LinearOperator(ABC):
         return self._args[0].device
 
     @implements(torch.detach)
-    def detach(self) -> "LinearOperator":
+    def detach(self) -> LinearOperator:
         """
         Removes the LinearOperator from the current computation graph.
         (In practice, this function removes all Tensors that make up the
@@ -849,7 +851,7 @@ class LinearOperator(ABC):
         return self.clone().detach_()
 
     @implements(torch.detach_)
-    def detach_(self) -> "LinearOperator":
+    def detach_(self) -> LinearOperator:
         """
         An in-place version of :meth:`detach`.
         """
@@ -885,7 +887,7 @@ class LinearOperator(ABC):
         return self.ndimension()
 
     @implements(torch.div)
-    def div(self, other: Union[float, torch.Tensor]) -> "LinearOperator":
+    def div(self, other: Union[float, torch.Tensor]) -> LinearOperator:
         """
         Returns the product of this LinearOperator
         the elementwise reciprocal of another matrix.
@@ -897,7 +899,7 @@ class LinearOperator(ABC):
         """
         return self.__div__(other)
 
-    def double(self) -> "LinearOperator":
+    def double(self) -> LinearOperator:
         """
         This method operates identically to :func:`torch.Tensor.double`.
 
@@ -920,7 +922,7 @@ class LinearOperator(ABC):
     def dtype(self) -> torch.dtype:
         return self._args[0].dtype
 
-    def expand(self, *sizes: Union[torch.Size, Tuple[int]]) -> "LinearOperator":
+    def expand(self, *sizes: Union[torch.Size, Tuple[int]]) -> LinearOperator:
         r"""
         Returns a new view of the self
         :obj:`~linear_operator.operators.LinearOperator` with singleton
@@ -1183,7 +1185,7 @@ class LinearOperator(ABC):
         return torch.Size(self.shape[-2:])
 
     @implements(torch.mul)
-    def mul(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def mul(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> LinearOperator:
         """
         Multiplies the matrix by a constant, or elementwise the matrix by another matrix.
 
@@ -1204,18 +1206,18 @@ class LinearOperator(ABC):
 
     def numel(self) -> int:
         """
-        :rtype: numpy.array
+        :rtype: int
         :return: The number of elements.
         """
         return self.shape.numel()
 
-    def numpy(self) -> numpy.array:
+    def numpy(self) -> numpy.ndarray:  # noqa F811
         """
         :return: The LinearOperator as an evaluated numpy array.
         """
         return self.evaluate().detach().cpu().numpy()
 
-    def permute(self, *dims: Tuple[int]) -> "LinearOperator":
+    def permute(self, *dims: Tuple[int]) -> LinearOperator:
         """
         Returns a view of the original tensor with its dimensions permuted.
 
@@ -1281,7 +1283,7 @@ class LinearOperator(ABC):
 
         return self._prod_batch(dim)
 
-    def repeat(self, *sizes: Union[torch.Size, Tuple[int]]) -> "LinearOperator":
+    def repeat(self, *sizes: Union[torch.Size, Tuple[int]]) -> LinearOperator:
         """
         Repeats this tensor along the specified dimensions.
 
@@ -1347,7 +1349,7 @@ class LinearOperator(ABC):
             if hasattr(arg, "requires_grad"):
                 arg.requires_grad = val
 
-    def requires_grad_(self, val: bool) -> "LinearOperator":
+    def requires_grad_(self, val: bool) -> LinearOperator:
         """
         Sets `requires_grad=val` on all the Tensors that make up the LinearOperator
         This is an inplace operation.
@@ -1359,7 +1361,7 @@ class LinearOperator(ABC):
         return self
 
     @cached(name="root_decomposition")
-    def root_decomposition(self, method: Optional[str] = None) -> "LinearOperator":
+    def root_decomposition(self, method: Optional[str] = None) -> LinearOperator:
         r"""
         Returns a (usually low-rank) root decomposition linear operator of the PSD LinearOperator :math:`\mathbf A`.
         This can be used for sampling from a Gaussian distribution, or for obtaining a
@@ -1422,7 +1424,7 @@ class LinearOperator(ABC):
     @cached(name="root_inv_decomposition")
     def root_inv_decomposition(
         self, initial_vectors: Optional[torch.Tensor] = None, test_vectors: Optional[torch.Tensor] = None
-    ) -> "LinearOperator":
+    ) -> LinearOperator:
         r"""
         Returns a (usually low-rank) inverse root decomposition linear operator
         of the PSD LinearOperator :math:`\mathbf A`.
@@ -1599,7 +1601,7 @@ class LinearOperator(ABC):
             return self[index]
 
     @implements(torch.sub)
-    def sub(self, other: Union[torch.Tensor, "LinearOperator"], alpha: float = None) -> "LinearOperator":
+    def sub(self, other: Union[torch.Tensor, "LinearOperator"], alpha: float = None) -> LinearOperator:
         r"""
         Each element of the tensor :attr:`other` is multiplied by the scalar :attr:`alpha`
         and subtracted to each element of the :obj:`~linear_operator.operators.LinearOperator`.
@@ -1709,7 +1711,7 @@ class LinearOperator(ABC):
             pass
         return self._symeig(eigenvectors=eigenvectors)
 
-    def to(self, device_id: torch.device) -> "LinearOperator":
+    def to(self, device_id: torch.device) -> LinearOperator:
         """
         A device-agnostic method of moving the linear_operator to the specified device.
 
@@ -1731,7 +1733,7 @@ class LinearOperator(ABC):
         return self.__class__(*new_args, **new_kwargs)
 
     @implements(torch.t)
-    def t(self) -> "LinearOperator":
+    def t(self) -> LinearOperator:
         """
         Alias of :meth:`transpose` for a non-batched LinearOperator.
         (Tranposes the two dimensions.)
@@ -1741,7 +1743,7 @@ class LinearOperator(ABC):
         return self.transpose(0, 1)
 
     @implements(torch.transpose)
-    def transpose(self, dim1: int, dim2: int) -> "LinearOperator":
+    def transpose(self, dim1: int, dim2: int) -> LinearOperator:
         """
         Transpose the dimensions :attr:`dim1` and :attr:`dim2` of the LinearOperator.
 
@@ -1781,7 +1783,7 @@ class LinearOperator(ABC):
         return res
 
     @implements(torch.unsqueeze)
-    def unsqueeze(self, dim: int) -> "LinearOperator":
+    def unsqueeze(self, dim: int) -> LinearOperator:
         """
         Inserts a singleton batch dimension of a LinearOperator, specifed by :attr:`dim`.
         Note that :attr:`dim` cannot correspond to matrix dimension of the LinearOperator.
@@ -1840,7 +1842,7 @@ class LinearOperator(ABC):
 
         return samples
 
-    def __add__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def __add__(self, other: Union[torch.Tensor, "LinearOperator"]) -> LinearOperator:
         from .sum_linear_operator import SumLinearOperator
         from .zero_linear_operator import ZeroLinearOperator
         from .diag_linear_operator import DiagLinearOperator
@@ -1861,7 +1863,7 @@ class LinearOperator(ABC):
         else:
             return SumLinearOperator(self, other)
 
-    def __div__(self, other: Union[float, torch.Tensor]) -> "LinearOperator":
+    def __div__(self, other: Union[float, torch.Tensor]) -> LinearOperator:
         from .zero_linear_operator import ZeroLinearOperator
 
         if isinstance(other, ZeroLinearOperator):
@@ -1963,7 +1965,7 @@ class LinearOperator(ABC):
 
         return Matmul.apply(self, other, *self.representation())
 
-    def __mul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def __mul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> LinearOperator:
         from .zero_linear_operator import ZeroLinearOperator
         from .dense_linear_operator import to_linear_operator
 
@@ -1988,16 +1990,16 @@ class LinearOperator(ABC):
 
         return self._mul_matrix(to_linear_operator(other))
 
-    def __radd__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def __radd__(self, other: Union[torch.Tensor, "LinearOperator"]) -> LinearOperator:
         return self + other
 
-    def __rmul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def __rmul__(self, other: Union[float, torch.Tensor, "LinearOperator"]) -> LinearOperator:
         return self.mul(other)
 
-    def __rsub__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def __rsub__(self, other: Union[torch.Tensor, "LinearOperator"]) -> LinearOperator:
         return self.mul(-1) + other
 
-    def __sub__(self, other: Union[torch.Tensor, "LinearOperator"]) -> "LinearOperator":
+    def __sub__(self, other: Union[torch.Tensor, "LinearOperator"]) -> LinearOperator:
         return self + other.mul(-1)
 
     def __torch_function__(self, func, types, args=(), kwargs=None):

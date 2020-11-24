@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import torch
 
 from ..utils.broadcasting import _pad_with_singletons

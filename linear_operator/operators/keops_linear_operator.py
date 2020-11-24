@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
 import torch
 
 from ..utils.getitem import _noop_index

@@ -48,7 +48,7 @@ setup(
     license="MIT",
     classifiers=["Programming Language :: Python :: 3"],
     packages=find_packages(),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=install_requires,
     extras_require={
         "dev": ["black", "twine", "pre-commit"],
