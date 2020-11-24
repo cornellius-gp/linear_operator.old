@@ -65,8 +65,8 @@ class SumLinearOperator(LinearOperator):
         return self.__class__(*linear_operators_t)
 
     @cached
-    def evaluate(self):
-        return sum(linear_operator.evaluate() for linear_operator in self.linear_operators)
+    def to_dense(self):
+        return sum(linear_operator.to_dense() for linear_operator in self.linear_operators)
 
     def __add__(self, other):
         from .diag_linear_operator import DiagLinearOperator

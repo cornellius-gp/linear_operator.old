@@ -20,7 +20,7 @@ class TestPsdSumLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         return PsdSumLinearOperator(t1, t2)
 
     def evaluate_linear_operator(self, linear_operator):
-        tensors = [lt.evaluate() for lt in linear_operator.linear_operators]
+        tensors = [lt.to_dense() for lt in linear_operator.linear_operators]
         return sum(tensors)
 
 
@@ -36,7 +36,7 @@ class TestPsdSumLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
         return PsdSumLinearOperator(t1, t2)
 
     def evaluate_linear_operator(self, linear_operator):
-        tensors = [lt.evaluate() for lt in linear_operator.linear_operators]
+        tensors = [lt.to_dense() for lt in linear_operator.linear_operators]
         return sum(tensors)
 
 
@@ -54,7 +54,7 @@ class TestPsdSumLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCa
         return PsdSumLinearOperator(lt1, lt2)
 
     def evaluate_linear_operator(self, linear_operator):
-        tensors = [lt.evaluate() for lt in linear_operator.linear_operators]
+        tensors = [lt.to_dense() for lt in linear_operator.linear_operators]
         return sum(tensors)
 
 
