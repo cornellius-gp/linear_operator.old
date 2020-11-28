@@ -25,10 +25,10 @@ class TestMulLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         return res.add_diag(torch.tensor(2.0))
 
     def evaluate_linear_operator(self, linear_operator):
-        diag_tensor = linear_operator._diag_tensor.evaluate()
+        diag_tensor = linear_operator._diag_tensor.to_dense()
         res = torch.mul(
-            linear_operator._linear_operator.left_linear_operator.evaluate(),
-            linear_operator._linear_operator.right_linear_operator.evaluate(),
+            linear_operator._linear_operator.left_linear_operator.to_dense(),
+            linear_operator._linear_operator.right_linear_operator.to_dense(),
         )
         res = res + diag_tensor
         return res
@@ -58,10 +58,10 @@ class TestMulLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
         return res.add_diag(torch.tensor(2.0))
 
     def evaluate_linear_operator(self, linear_operator):
-        diag_tensor = linear_operator._diag_tensor.evaluate()
+        diag_tensor = linear_operator._diag_tensor.to_dense()
         res = torch.mul(
-            linear_operator._linear_operator.left_linear_operator.evaluate(),
-            linear_operator._linear_operator.right_linear_operator.evaluate(),
+            linear_operator._linear_operator.left_linear_operator.to_dense(),
+            linear_operator._linear_operator.right_linear_operator.to_dense(),
         )
         res = res + diag_tensor
         return res
@@ -92,10 +92,10 @@ class TestMulLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase)
         return res.add_diag(torch.tensor(0.5))
 
     def evaluate_linear_operator(self, linear_operator):
-        diag_tensor = linear_operator._diag_tensor.evaluate()
+        diag_tensor = linear_operator._diag_tensor.to_dense()
         res = torch.mul(
-            linear_operator._linear_operator.left_linear_operator.evaluate(),
-            linear_operator._linear_operator.right_linear_operator.evaluate(),
+            linear_operator._linear_operator.left_linear_operator.to_dense(),
+            linear_operator._linear_operator.right_linear_operator.to_dense(),
         )
         res = res + diag_tensor
         return res

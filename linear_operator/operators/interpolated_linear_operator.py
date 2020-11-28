@@ -382,10 +382,10 @@ class InterpolatedLinearOperator(LinearOperator):
             self.base_linear_operator.root, DenseLinearOperator
         ):
             left_interp_vals = left_interp(
-                self.left_interp_indices, self.left_interp_values, self.base_linear_operator.root.evaluate()
+                self.left_interp_indices, self.left_interp_values, self.base_linear_operator.root.to_dense()
             )
             right_interp_vals = left_interp(
-                self.right_interp_indices, self.right_interp_values, self.base_linear_operator.root.evaluate()
+                self.right_interp_indices, self.right_interp_values, self.base_linear_operator.root.to_dense()
             )
             return (left_interp_vals * right_interp_vals).sum(-1)
         else:

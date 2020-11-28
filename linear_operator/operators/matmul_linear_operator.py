@@ -69,7 +69,7 @@ class MatmulLinearOperator(LinearOperator):
         if torch.is_tensor(row_index) and torch.is_tensor(col_index):
             num_indices = row_index.numel()
             if num_indices > self.matrix_shape.numel():
-                return to_linear_operator(self.evaluate())._getitem(row_index, col_index, *batch_indices)
+                return to_linear_operator(self.to_dense())._getitem(row_index, col_index, *batch_indices)
 
         left_tensor = self.left_linear_operator._getitem(row_index, _noop_index, *batch_indices)
         right_tensor = self.right_linear_operator._getitem(_noop_index, col_index, *batch_indices)
@@ -124,5 +124,5 @@ class MatmulLinearOperator(LinearOperator):
             return super().diag()
 
     @cached
-    def evaluate(self):
-        return torch.matmul(self.left_linear_operator.evaluate(), self.right_linear_operator.evaluate())
+    def to_dense(self):
+        return torch.matmul(self.left_linear_operator.to_dense(), self.right_linear_operator.to_dense())

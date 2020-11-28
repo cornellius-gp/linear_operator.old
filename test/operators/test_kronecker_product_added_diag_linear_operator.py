@@ -39,7 +39,7 @@ class TestKroneckerProductAddedDiagLinearOperator(unittest.TestCase, LinearOpera
         )
 
     def evaluate_linear_operator(self, linear_operator):
-        tensor = linear_operator._linear_operator.evaluate()
+        tensor = linear_operator._linear_operator.to_dense()
         diag = linear_operator._diag_tensor._diag
         return tensor + diag.diag()
 

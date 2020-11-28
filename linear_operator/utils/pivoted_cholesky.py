@@ -61,7 +61,7 @@ def pivoted_cholesky(matrix, max_iter, error_tol=None):
 
         row = matrix[(*batch_iters, pi_m.view(-1), slice(None, None, None))]
         if isinstance(row, LinearOperator):
-            row = row.evaluate()
+            row = row.to_dense()
         row = row.view(*batch_shape, matrix_shape[-1])
 
         if m + 1 < matrix_shape[-1]:

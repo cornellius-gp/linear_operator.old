@@ -59,7 +59,7 @@ class SumBatchLinearOperator(BlockLinearOperator):
         diag = self.base_linear_operator.diag().sum(-2)
         return diag
 
-    def evaluate(self):
-        return self.base_linear_operator.evaluate().sum(
+    def to_dense(self):
+        return self.base_linear_operator.to_dense().sum(
             dim=-3
         )  # BlockLinearOperators always use dim3 for the block_dim

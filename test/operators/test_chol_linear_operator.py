@@ -25,7 +25,7 @@ class TestCholLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         return CholLinearOperator(TriangularLinearOperator(chol))
 
     def evaluate_linear_operator(self, linear_operator):
-        chol = linear_operator.root.evaluate()
+        chol = linear_operator.root.to_dense()
         return chol.matmul(chol.transpose(-1, -2))
 
 
