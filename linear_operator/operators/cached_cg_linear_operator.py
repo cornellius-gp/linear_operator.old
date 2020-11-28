@@ -164,7 +164,7 @@ class CachedCGLinearOperator(LinearOperator):
                 "LinearOperator should pre-register all vectors to run CG against.".format(rhs.shape),
                 ExtraComputationWarning,
             )
-        return torch.cholesky_solve(rhs, self.evaluate(), upper=upper)
+        return torch.cholesky_solve(rhs, self.to_dense(), upper=upper)
 
     def _expand_batch(self, batch_shape):
         return self.base_linear_operator._expand_batch(batch_shape)

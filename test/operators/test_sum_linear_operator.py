@@ -19,7 +19,7 @@ class TestSumLinearOperator(LinearOperatorTestCase, unittest.TestCase):
         return t1 + t2
 
     def evaluate_linear_operator(self, linear_operator):
-        tensors = [lt.evaluate() for lt in linear_operator.linear_operators]
+        tensors = [lt.to_dense() for lt in linear_operator.linear_operators]
         return sum(tensors)
 
 
@@ -34,7 +34,7 @@ class TestSumLinearOperatorBatch(LinearOperatorTestCase, unittest.TestCase):
         return t1 + t2
 
     def evaluate_linear_operator(self, linear_operator):
-        tensors = [lt.evaluate() for lt in linear_operator.linear_operators]
+        tensors = [lt.to_dense() for lt in linear_operator.linear_operators]
         return sum(tensors)
 
 
@@ -55,7 +55,7 @@ class TestSumLinearOperatorMultiBatch(LinearOperatorTestCase, unittest.TestCase)
         return t1 + t2
 
     def evaluate_linear_operator(self, linear_operator):
-        tensors = [lt.evaluate() for lt in linear_operator.linear_operators]
+        tensors = [lt.to_dense() for lt in linear_operator.linear_operators]
         return sum(tensors)
 
 
@@ -67,10 +67,10 @@ class TestSumLinearOperatorBroadcasting(unittest.TestCase):
         res = test1 + test2
         final_res = res + test2
 
-        torch_res = res.evaluate() + test2
+        torch_res = res.to_dense() + test2
 
         self.assertEqual(final_res.shape, torch_res.shape)
-        self.assertEqual((final_res.evaluate() - torch_res).sum(), 0.0)
+        self.assertEqual((final_res.to_dense() - torch_res).sum(), 0.0)
 
     def test_broadcast_tensor_shape(self):
         test1 = to_linear_operator(torch.randn(30, 30))
@@ -79,10 +79,10 @@ class TestSumLinearOperatorBroadcasting(unittest.TestCase):
         res = test1 + test2
         final_res = res + test2
 
-        torch_res = res.evaluate() + test2
+        torch_res = res.to_dense() + test2
 
         self.assertEqual(final_res.shape, torch_res.shape)
-        self.assertEqual((final_res.evaluate() - torch_res).sum(), 0.0)
+        self.assertEqual((final_res.to_dense() - torch_res).sum(), 0.0)
 
     def test_broadcast_lo_shape(self):
         test1 = to_linear_operator(torch.randn(30, 1))
@@ -91,10 +91,10 @@ class TestSumLinearOperatorBroadcasting(unittest.TestCase):
         res = test1 + test2
         final_res = res + test2
 
-        torch_res = res.evaluate() + test2
+        torch_res = res.to_dense() + test2
 
         self.assertEqual(final_res.shape, torch_res.shape)
-        self.assertEqual((final_res.evaluate() - torch_res).sum(), 0.0)
+        self.assertEqual((final_res.to_dense() - torch_res).sum(), 0.0)
 
 
 if __name__ == "__main__":

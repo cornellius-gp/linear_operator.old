@@ -325,7 +325,7 @@ class LinearOperator(ABC):
             InterpolatedLinearOperator(
                 base_linear_operator, row_interp_indices, row_interp_values, col_interp_indices, col_interp_values
             )
-            .evaluate()
+            .to_dense()
             .squeeze(-2)
             .squeeze(-1)
         )
@@ -415,14 +415,14 @@ class LinearOperator(ABC):
         """
         from .triangular_linear_operator import TriangularLinearOperator
 
-        evaluated_mat = self.evaluate()
+        dense_operator = self.to_dense()
 
         # if the tensor is a scalar, we can just take the square root
-        if evaluated_mat.size(-1) == 1:
-            return TriangularLinearOperator(evaluated_mat.clamp_min(0.0).sqrt())
+        if dense_operator.size(-1) == 1:
+            return TriangularLinearOperator(dense_operator.clamp_min(0.0).sqrt())
 
         # contiguous call is necessary here
-        cholesky = psd_safe_cholesky(evaluated_mat, jitter=settings.cholesky_jitter.value(), upper=upper).contiguous()
+        cholesky = psd_safe_cholesky(dense_operator, jitter=settings.cholesky_jitter.value(), upper=upper).contiguous()
         return TriangularLinearOperator(cholesky, upper=upper)
 
     def _cholesky_solve(self, rhs, upper: bool = False):
@@ -469,7 +469,7 @@ class LinearOperator(ABC):
         from .mul_linear_operator import MulLinearOperator
 
         if isinstance(self, DenseLinearOperator) or isinstance(other, DenseLinearOperator):
-            return DenseLinearOperator(self.evaluate() * other.evaluate())
+            return DenseLinearOperator(self.to_dense() * other.to_dense())
         else:
             left_linear_operator = self if self._root_decomposition_size() < other._root_decomposition_size() else other
             right_linear_operator = other if left_linear_operator is self else self
@@ -508,7 +508,7 @@ class LinearOperator(ABC):
         if self.size(dim) == 1:
             return self.squeeze(dim)
 
-        roots = self.root_decomposition().root.evaluate()
+        roots = self.root_decomposition().root.to_dense()
         num_batch = roots.size(dim)
 
         while True:
@@ -538,7 +538,7 @@ class LinearOperator(ABC):
                 break
             else:
                 res = MulLinearOperator(RootLinearOperator(part1), RootLinearOperator(part2))
-                roots = res.root_decomposition().root.evaluate()
+                roots = res.root_decomposition().root.to_dense()
                 num_batch = num_batch // 2
 
         return res
@@ -656,7 +656,7 @@ class LinearOperator(ABC):
 
         dtype = self.dtype  # perform decomposition in double precision for numerical stability
         # TODO: Use fp64 registry once #1213 is addressed
-        evals, evecs = torch.symeig(self.evaluate().to(dtype=torch.double), eigenvectors=eigenvectors)
+        evals, evecs = torch.symeig(self.to_dense().to(dtype=torch.double), eigenvectors=eigenvectors)
         # chop any negative eigenvalues. TODO: warn if evals are significantly negative
         evals = evals.clamp_min(0.0).to(dtype=dtype)
         if eigenvectors:
@@ -958,9 +958,8 @@ class LinearOperator(ABC):
         res = self._expand_batch(batch_shape=shape[:-2])
         return res
 
-    # TODO: rename to to_dense
     @cached
-    def evaluate(self) -> torch.Tensor:
+    def to_dense(self) -> torch.Tensor:
         """
         Explicitly evaluates the matrix this LinearOperator represents. This function
         should return a :obj:`torch.Tensor` storing an exact representation of this LinearOperator.
@@ -1211,9 +1210,9 @@ class LinearOperator(ABC):
 
     def numpy(self) -> numpy.array:
         """
-        :return: The LinearOperator as an evaluated numpy array.
+        :return: The LinearOperator as an dense numpy array.
         """
-        return self.evaluate().detach().cpu().numpy()
+        return self.to_dense().detach().cpu().numpy()
 
     def permute(self, *dims: Tuple[int]) -> "LinearOperator":
         """
@@ -1262,7 +1261,7 @@ class LinearOperator(ABC):
                     [[2, 1], [1, 1.]],
                     [[3, 2], [2, -1]],
                 ]))
-            >>> linear_operator.prod().evaluate()
+            >>> linear_operator.prod().to_dense()
             >>> # Returns: torch.Tensor(768.)
             >>> linear_operator.prod(dim=-3)
             >>> # Returns: tensor([[8., 2.], [1., -2.], [2., 1.], [6., -2.]])
@@ -1295,7 +1294,7 @@ class LinearOperator(ABC):
         Example:
 
             >>> linear_operator = ToeplitzLinearOperator(torch.tensor([4. 1., 0.5]))
-            >>> linear_operator.repeat(2, 1, 1).evaluate()
+            >>> linear_operator.repeat(2, 1, 1).to_dense()
             tensor([[[4.0000, 1.0000, 0.5000],
                      [1.0000, 4.0000, 1.0000],
                      [0.5000, 1.0000, 4.0000]],
@@ -1400,7 +1399,7 @@ class LinearOperator(ABC):
                 method = "symeig"
 
         if method == "pivoted_cholesky":
-            return RootLinearOperator(pivoted_cholesky(self.evaluate(), max_iter=self._root_decomposition_size()))
+            return RootLinearOperator(pivoted_cholesky(self.to_dense(), max_iter=self._root_decomposition_size()))
 
         if method == "symeig":
             evals, evecs = self.symeig(eigenvectors=True)
@@ -1442,7 +1441,7 @@ class LinearOperator(ABC):
         from .dense_linear_operator import to_linear_operator
 
         if self.shape[-2:].numel() == 1:
-            return RootLinearOperator(1 / self.evaluate().sqrt())
+            return RootLinearOperator(1 / self.to_dense().sqrt())
 
         if (
             self.size(-1) <= settings.max_cholesky_size.value()
@@ -1640,7 +1639,7 @@ class LinearOperator(ABC):
                     [[2, 1], [1, 0]],
                     [[3, 2], [2, -1]],
                 ]))
-            >>> linear_operator.sum(0).evaluate()
+            >>> linear_operator.sum(0).to_dense()
         """
         # Case: summing everything
         if dim is None:
@@ -1829,7 +1828,7 @@ class LinearOperator(ABC):
 
         else:
             if self.size()[-2:] == torch.Size([1, 1]):
-                covar_root = self.evaluate().sqrt()
+                covar_root = self.to_dense().sqrt()
             else:
                 covar_root = self.root_decomposition().root
 
@@ -2028,7 +2027,7 @@ def to_dense(obj):
     if torch.is_tensor(obj):
         return obj
     elif isinstance(obj, LinearOperator):
-        return obj.evaluate()
+        return obj.to_dense()
     else:
         raise TypeError("object of class {} cannot be made into a Tensor".format(obj.__class__.__name__))
 

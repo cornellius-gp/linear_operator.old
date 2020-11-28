@@ -36,7 +36,7 @@ class ConstantMulLinearOperator(LinearOperator):
         >>> base_base_linear_operator = ToeplitzLinearOperator([1, 2, 3])
         >>> constant = torch.tensor(1.2)
         >>> new_base_linear_operator = ConstantMulLinearOperator(base_base_linear_operator, constant)
-        >>> new_base_linear_operator.evaluate()
+        >>> new_base_linear_operator.to_dense()
         >>> # Returns:
         >>> # [[ 1.2, 2.4, 3.6 ]
         >>> #  [ 2.4, 1.2, 2.4 ]
@@ -45,7 +45,7 @@ class ConstantMulLinearOperator(LinearOperator):
         >>> base_base_linear_operator = ToeplitzLinearOperator([[1, 2, 3], [2, 3, 4]])
         >>> constant = torch.tensor([1.2, 0.5])
         >>> new_base_linear_operator = ConstantMulLinearOperator(base_base_linear_operator, constant)
-        >>> new_base_linear_operator.evaluate()
+        >>> new_base_linear_operator.to_dense()
         >>> # Returns:
         >>> # [[[ 1.2, 2.4, 3.6 ]
         >>> #   [ 2.4, 1.2, 2.4 ]
@@ -150,6 +150,6 @@ class ConstantMulLinearOperator(LinearOperator):
         return res * self._constant.unsqueeze(-1)
 
     @cached
-    def evaluate(self):
-        res = self.base_linear_operator.evaluate()
+    def to_dense(self):
+        res = self.base_linear_operator.to_dense()
         return res * self.expanded_constant

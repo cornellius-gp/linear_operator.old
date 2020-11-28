@@ -48,7 +48,7 @@ class MulLinearOperator(LinearOperator):
 
         # Here we have a root decomposition
         if isinstance(self.left_linear_operator, RootLinearOperator):
-            left_root = self.left_linear_operator.root.evaluate()
+            left_root = self.left_linear_operator.root.to_dense()
             left_res = rhs.unsqueeze(-2) * left_root.unsqueeze(-1)
 
             rank = left_root.size(-1)
@@ -61,7 +61,7 @@ class MulLinearOperator(LinearOperator):
             res = left_res.mul_(left_root.unsqueeze(-1)).sum(-2)
         # This is the case where we're not doing a root decomposition, because the matrix is too small
         else:
-            res = (self.left_linear_operator.evaluate() * self.right_linear_operator.evaluate()).matmul(rhs)
+            res = (self.left_linear_operator.to_dense() * self.right_linear_operator.to_dense()).matmul(rhs)
         res = res.squeeze(-1) if is_vector else res
         return res
 
@@ -76,14 +76,14 @@ class MulLinearOperator(LinearOperator):
         *batch_shape, n, num_vecs = left_vecs.size()
 
         if isinstance(self.right_linear_operator, RootLinearOperator):
-            right_root = self.right_linear_operator.root.evaluate()
+            right_root = self.right_linear_operator.root.to_dense()
             left_factor = left_vecs.unsqueeze(-2) * right_root.unsqueeze(-1)
             right_factor = right_vecs.unsqueeze(-2) * right_root.unsqueeze(-1)
             right_rank = right_root.size(-1)
         else:
             right_rank = n
             eye = torch.eye(n, dtype=self.right_linear_operator.dtype, device=self.right_linear_operator.device)
-            left_factor = left_vecs.unsqueeze(-2) * self.right_linear_operator.evaluate().unsqueeze(-1)
+            left_factor = left_vecs.unsqueeze(-2) * self.right_linear_operator.to_dense().unsqueeze(-1)
             right_factor = right_vecs.unsqueeze(-2) * eye.unsqueeze(-1)
 
         left_factor = left_factor.view(*batch_shape, n, num_vecs * right_rank)
@@ -91,14 +91,14 @@ class MulLinearOperator(LinearOperator):
         left_deriv_args = self.left_linear_operator._quad_form_derivative(left_factor, right_factor)
 
         if isinstance(self.left_linear_operator, RootLinearOperator):
-            left_root = self.left_linear_operator.root.evaluate()
+            left_root = self.left_linear_operator.root.to_dense()
             left_factor = left_vecs.unsqueeze(-2) * left_root.unsqueeze(-1)
             right_factor = right_vecs.unsqueeze(-2) * left_root.unsqueeze(-1)
             left_rank = left_root.size(-1)
         else:
             left_rank = n
             eye = torch.eye(n, dtype=self.left_linear_operator.dtype, device=self.left_linear_operator.device)
-            left_factor = left_vecs.unsqueeze(-2) * self.left_linear_operator.evaluate().unsqueeze(-1)
+            left_factor = left_vecs.unsqueeze(-2) * self.left_linear_operator.to_dense().unsqueeze(-1)
             right_factor = right_vecs.unsqueeze(-2) * eye.unsqueeze(-1)
 
         left_factor = left_factor.view(*batch_shape, n, num_vecs * left_rank)
@@ -117,8 +117,8 @@ class MulLinearOperator(LinearOperator):
         return res
 
     @cached
-    def evaluate(self):
-        return self.left_linear_operator.evaluate() * self.right_linear_operator.evaluate()
+    def to_dense(self):
+        return self.left_linear_operator.to_dense() * self.right_linear_operator.to_dense()
 
     def _size(self):
         return self.left_linear_operator.size()

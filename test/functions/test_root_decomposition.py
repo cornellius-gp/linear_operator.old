@@ -22,7 +22,7 @@ class TestRootDecomposition(BaseTestCase, unittest.TestCase):
         mat_clone = mat.detach().clone().requires_grad_(True)
 
         # Forward
-        root = DenseLinearOperator(mat).root_decomposition().root.evaluate()
+        root = DenseLinearOperator(mat).root_decomposition().root.to_dense()
         res = root.matmul(root.transpose(-1, -2))
         self.assertAllClose(res, mat)
 
@@ -38,7 +38,7 @@ class TestRootDecomposition(BaseTestCase, unittest.TestCase):
         # Forward
         probe_vectors = torch.randn(*mat.shape[:-2], 4, 5)
         test_vectors = torch.randn(*mat.shape[:-2], 4, 5)
-        root = DenseLinearOperator(mat).root_inv_decomposition(probe_vectors, test_vectors).root.evaluate()
+        root = DenseLinearOperator(mat).root_inv_decomposition(probe_vectors, test_vectors).root.to_dense()
         res = root.matmul(root.transpose(-1, -2))
         actual = mat_clone.inverse()
         self.assertAllClose(res, actual)
