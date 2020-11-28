@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from functools import reduce
 from operator import mul
 from typing import List

@@ -5,7 +5,7 @@ branches:
     - main
 
 python:
-  - "3.6"
+  - "3.7"
 env:
   - PYTORCH_VERSION=master
   - PYTORCH_VERSION=stable
@@ -26,6 +26,6 @@ script:
 matrix:
   include:
     - env: PRECOMMIT_CHECK
-      python: "3.6"
+      python: "3.7"
       install: pip install pre-commit; pre-commit install
       script: pre-commit run --files test/**/*.py linear_operator/**/*.py

@@ -48,11 +48,11 @@ setup(
     license="MIT",
     classifiers=["Programming Language :: Python :: 3"],
     packages=find_packages(),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=install_requires,
     extras_require={
         "dev": ["black", "twine", "pre-commit"],
-        "docs": ["sphinx<3.0.0", "sphinx_rtd_theme", "sphinx-autodoc-typehints"],
+        "docs": ["sphinx<3.0.0", "sphinx_rtd_theme", "sphinx-autodoc-typehints", "six"],
         "test": ["flake8", "flake8-print"],
     },
 )

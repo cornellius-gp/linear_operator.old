@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import torch
 
 from .added_diag_linear_operator import AddedDiagLinearOperator

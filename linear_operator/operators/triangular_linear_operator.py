@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from typing import Callable, Optional, Tuple, Union
 
 import torch
@@ -78,7 +80,7 @@ class TriangularLinearOperator(LinearOperator):
     def _matmul(self, rhs: Tensor) -> Tensor:
         return self._tensor.matmul(rhs)
 
-    def _mul_constant(self, constant: Tensor) -> "TriangularLinearOperator":
+    def _mul_constant(self, constant: Tensor) -> TriangularLinearOperator:
         return TriangularLinearOperator(self._tensor * constant.unsqueeze(-1), upper=self.upper)
 
     def _root_decomposition(self) -> Allsor:
@@ -94,16 +96,16 @@ class TriangularLinearOperator(LinearOperator):
         # already triangular, can just call inv_matmul for the solve
         return self.inv_matmul(rhs)
 
-    def _sum_batch(self, dim: int) -> "TriangularLinearOperator":
+    def _sum_batch(self, dim: int) -> TriangularLinearOperator:
         return TriangularLinearOperator(self._tensor._sum_batch(dim), upper=self.upper)
 
-    def _transpose_nonbatch(self) -> "TriangularLinearOperator":
+    def _transpose_nonbatch(self) -> TriangularLinearOperator:
         return TriangularLinearOperator(self._tensor._transpose_nonbatch(), upper=not self.upper)
 
-    def abs(self) -> "TriangularLinearOperator":
+    def abs(self) -> TriangularLinearOperator:
         return TriangularLinearOperator(self._tensor.abs(), upper=self.upper)
 
-    def add_diag(self, added_diag: Tensor) -> "TriangularLinearOperator":
+    def add_diag(self, added_diag: Tensor) -> TriangularLinearOperator:
         from .added_diag_linear_operator import AddedDiagLinearOperator
 
         shape = _mul_broadcast_shape(self._diag.shape, added_diag.shape)
@@ -117,7 +119,7 @@ class TriangularLinearOperator(LinearOperator):
     def to_dense(self) -> Tensor:
         return self._tensor.to_dense()
 
-    def exp(self) -> "TriangularLinearOperator":
+    def exp(self) -> TriangularLinearOperator:
         return TriangularLinearOperator(self._tensor.exp(), upper=self.upper)
 
     def inv_matmul(self, right_tensor: Tensor, left_tensor: Optional[Tensor] = None) -> Tensor:
@@ -154,7 +156,7 @@ class TriangularLinearOperator(LinearOperator):
         return inv_quad_term, logdet_term
 
     @cached
-    def inverse(self) -> "TriangularLinearOperator":
+    def inverse(self) -> TriangularLinearOperator:
         eye = torch.eye(self._tensor.size(-1), device=self._tensor.device, dtype=self._tensor.dtype)
         inv = self.inv_matmul(eye)
         return TriangularLinearOperator(inv, upper=self.upper)

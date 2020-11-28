@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 
 class LinearOperatorRepresentationTree(object):
     def __init__(self, linear_op):
