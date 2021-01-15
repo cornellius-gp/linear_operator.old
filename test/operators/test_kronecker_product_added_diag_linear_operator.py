@@ -9,6 +9,7 @@ import torch
 
 from linear_operator import settings
 from linear_operator.operators import (
+    ConstantDiagLinearOperator,
     DenseLinearOperator,
     DiagLinearOperator,
     KroneckerProductAddedDiagLinearOperator,
@@ -23,7 +24,7 @@ class TestKroneckerProductAddedDiagLinearOperator(unittest.TestCase, LinearOpera
     should_call_lanczos = False
     should_call_cg = False
 
-    def create_linear_operator(self):
+    def create_linear_operator(self, constant_diag=True):
         a = torch.tensor([[4, 0, 2], [0, 3, -1], [2, -1, 3]], dtype=torch.float)
         b = torch.tensor([[2, 1], [1, 2]], dtype=torch.float)
         c = torch.tensor([[4, 0.5, 1, 0], [0.5, 4, -1, 0], [1, -1, 3, 0], [0, 0, 0, 4]], dtype=torch.float)
@@ -33,10 +34,13 @@ class TestKroneckerProductAddedDiagLinearOperator(unittest.TestCase, LinearOpera
         kp_linear_operator = KroneckerProductLinearOperator(
             DenseLinearOperator(a), DenseLinearOperator(b), DenseLinearOperator(c)
         )
-
-        return KroneckerProductAddedDiagLinearOperator(
-            kp_linear_operator, DiagLinearOperator(0.1 * torch.ones(kp_linear_operator.shape[-1]))
-        )
+        if constant_diag:
+            diag_linear_operator = ConstantDiagLinearOperator(
+                torch.tensor([0.25], dtype=torch.float), kp_linear_operator.shape[-1],
+            )
+        else:
+            diag_linear_operator = DiagLinearOperator(0.5 * torch.rand(kp_linear_operator.shape[-1], dtype=torch.float))
+        return KroneckerProductAddedDiagLinearOperator(kp_linear_operator, diag_linear_operator)
 
     def evaluate_linear_operator(self, linear_operator):
         tensor = linear_operator._linear_operator.to_dense()
@@ -59,7 +63,7 @@ class TestKroneckerProductAddedDiagLinearOperator(unittest.TestCase, LinearOpera
             with mock.patch.object(linear_operator, "cholesky") as chol_mock:
                 root_approx = linear_operator.root_inv_decomposition()
                 res = root_approx.matmul(test_mat)
-                actual = linear_operator.inv_matmul(test_mat)
+                actual = torch.solve(test_mat, linear_operator.to_dense()).solution
                 self.assertAllClose(res, actual, rtol=0.05, atol=0.02)
                 chol_mock.assert_not_called()
 

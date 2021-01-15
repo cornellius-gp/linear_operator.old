@@ -1925,7 +1925,7 @@ class LinearOperator(ABC):
         # Alternatively, if we're using tensor indices and losing dimensions, use self._get_indices
         if row_col_are_absorbed:
             # Convert all indices into tensor indices
-            *batch_indices, row_index, col_index, = _convert_indices_to_tensors(
+            (*batch_indices, row_index, col_index,) = _convert_indices_to_tensors(
                 self, (*batch_indices, row_index, col_index)
             )
             res = self._get_indices(row_index, col_index, *batch_indices)

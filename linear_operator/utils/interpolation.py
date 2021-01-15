@@ -156,8 +156,7 @@ class Interpolation(object):
 
 
 def left_interp(interp_indices, interp_values, rhs):
-    """
-    """
+    """"""
     is_vector = rhs.ndimension() == 1
 
     if is_vector:
@@ -181,8 +180,7 @@ def left_interp(interp_indices, interp_values, rhs):
 
 
 def left_t_interp(interp_indices, interp_values, rhs, output_dim):
-    """
-    """
+    """"""
     from .. import dsmm
 
     is_vector = rhs.ndimension() == 1
